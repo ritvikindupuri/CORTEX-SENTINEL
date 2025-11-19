@@ -126,7 +126,7 @@ const App: React.FC = () => {
                  <div className="bg-[#171717] border border-[#262626] p-4 space-y-4">
                     <div className="flex justify-between items-center border-b border-[#262626] pb-3">
                       <div>
-                        <div className="text-sm text-blue-400 font-mono font-bold">CLAUDE 3.5 SONNET</div>
+                        <div className="text-sm text-blue-400 font-mono font-bold">CLAUDE 3.7 SONNET</div>
                         <div className="text-xs text-[#737373]">MCP Simulation & Attack Generation</div>
                       </div>
                     </div>

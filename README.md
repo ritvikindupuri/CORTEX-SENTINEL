@@ -2,7 +2,7 @@
 ## Agent Defense Platform & Heuristic Firewall
 
 **Author:** Ritvik Indupuri
-**Version:** 1.0.4-RC
+**Version:** 1.0.5-RC
 
 ---
 
@@ -20,7 +20,7 @@ Cortex Sentinel solves this problem by deploying a semantic heuristics engine th
 Unlike signature-based detection, Cortex Sentinel uses a Generative AI model (Gemini 2.5 Flash) as a classifier. It evaluates the "intent" of a log entry, assigning a probability score based on detected Indicators of Compromise (IoCs).
 
 #### B. Red Team Simulator (Wargames Mode)
-To test defenses, the platform includes a built-in Adversarial Simulator. It can interface with the Anthropic API (Claude 3.5 Sonnet) or Google Gemini to generate realistic, sophisticated attack logs. This allows security teams to validate their defense posture against specific vectors like "Social Engineering" or "MCP Exploitation" before a real attack occurs.
+To test defenses, the platform includes a built-in Adversarial Simulator. It can interface with the **Anthropic API (Claude 3.7 Sonnet)** or Google Gemini to generate realistic, sophisticated attack logs. This allows security teams to validate their defense posture against specific vectors like "Social Engineering" or "MCP Exploitation" before a real attack occurs.
 
 #### C. Real-Time Ops Center
 A React-based dashboard provides situational awareness, visualizing system load, threat distribution, and an anomaly timeline. All metrics are calculated client-side based on the live telemetry stream.
@@ -77,7 +77,7 @@ The application will launch at http://localhost:3000.
 5. Once the logs are generated, run the analysis to verify detection.
 
 #### Configuration
-To use the Claude 3.5 Sonnet model for attack simulation (highly recommended for accuracy):
+To use the **Claude 3.7 Sonnet** model for attack simulation (highly recommended for accuracy):
 1. Click **Platform Config** in the bottom-left corner.
 2. Enter your Anthropic API Key.
 3. The key is stored securely in your browser's LocalStorage and is never sent to any backend server.

@@ -115,7 +115,7 @@ export const generateSimulation = async (claudeApiKey?: string, vector: string =
           'anthropic-dangerously-allow-browser': 'true' // Critical for client-side testing
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
+          model: 'claude-3-7-sonnet-20250219', // Updated to latest Claude 3.7 model
           max_tokens: 1024,
           system: SYSTEM_INSTRUCTION_ATTACKER,
           messages: [{ role: 'user', content: prompt }]
