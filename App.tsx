@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Key, Check, Shield, AlertCircle } from 'lucide-react';
+import { X, Save, Key, Check, Shield, AlertCircle, AlertTriangle } from 'lucide-react';
 import { LogEntry, ThreatAnalysis } from './types';
 
 const App: React.FC = () => {
@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [claudeKey, setClaudeKey] = useState('');
   const [tempKey, setTempKey] = useState('');
+  const [keyError, setKeyError] = useState('');
 
   useEffect(() => {
     const storedKey = localStorage.getItem('sentinel_claude_key');
@@ -21,8 +22,22 @@ const App: React.FC = () => {
   }, []);
 
   const handleSaveKey = () => {
-    localStorage.setItem('sentinel_claude_key', tempKey);
-    setClaudeKey(tempKey);
+    setKeyError('');
+    const cleanedKey = tempKey.trim();
+    
+    if (!cleanedKey) {
+      setKeyError('API Key cannot be empty.');
+      return;
+    }
+
+    if (!cleanedKey.startsWith('sk-ant-')) {
+      setKeyError('Invalid Format: Key must start with "sk-ant-"');
+      return;
+    }
+
+    localStorage.setItem('sentinel_claude_key', cleanedKey);
+    setClaudeKey(cleanedKey);
+    setIsSettingsOpen(false); // Close on success
   };
 
   const handleAnalysisComplete = (analysis: ThreatAnalysis) => {
@@ -43,7 +58,10 @@ const App: React.FC = () => {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => {
+          setKeyError(''); // Reset error when opening
+          setIsSettingsOpen(true);
+        }}
       />
       
       <main className="flex-1 overflow-auto relative z-10 bg-[#050505]">
@@ -141,7 +159,7 @@ const App: React.FC = () => {
                             value={tempKey}
                             onChange={(e) => setTempKey(e.target.value)}
                             placeholder="sk-ant-..."
-                            className="w-full bg-black border border-[#333] py-2 pl-9 pr-3 text-xs text-white placeholder-[#333] focus:outline-none focus:border-blue-600 transition-colors font-mono"
+                            className={`w-full bg-black border py-2 pl-9 pr-3 text-xs text-white placeholder-[#333] focus:outline-none focus:border-blue-600 transition-colors font-mono ${keyError ? 'border-red-500' : 'border-[#333]'}`}
                           />
                         </div>
                         <button 
@@ -152,6 +170,14 @@ const App: React.FC = () => {
                           <Save size={16} />
                         </button>
                       </div>
+                      
+                      {keyError && (
+                        <div className="text-[10px] text-red-500 font-mono flex items-center gap-1.5 mt-1">
+                           <AlertTriangle size={10} />
+                           {keyError}
+                        </div>
+                      )}
+
                       <p className="text-[10px] text-[#525252] font-mono flex gap-2 items-center mt-2">
                         <AlertCircle size={10} />
                         Key is stored locally in browser secure storage.
