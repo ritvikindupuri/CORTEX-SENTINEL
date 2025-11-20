@@ -98,6 +98,26 @@ The Dashboard is a **Pure Component**; it holds no internal state regarding the 
 
 ---
 
-## 4.0 Conclusion
+## 4.0 Deep Dive: MCP Guardrail Heuristics
+
+This application was engineered specifically to solve the vulnerability of **Agentic Breakout** via the Model Context Protocol (MCP). The defense engine (`services/gemini.ts`) implements three specific heuristic algorithms to enforce these guardrails:
+
+### 4.1 Velocity Limiting (The "Speed" Heuristic)
+*   **The Threat:** As detailed in recent intelligence reports, AI agents can chain tools at speeds exceeding human capability (e.g., 100 requests/sec).
+*   **The Solution:** The Sentinel prompt is instructed to analyze the timestamps and tool call frequency in the log.
+*   **Logic:** `IF (tool_calls > 3) AND (time_delta < 500ms) THEN THREAT_LEVEL = CRITICAL`.
+
+### 4.2 Persona Validation (The "Social Engineering" Heuristic)
+*   **The Threat:** Attackers use jailbreaks like "I am RedScan Security Audit" to trick LLMs into bypassing safety filters.
+*   **The Solution:** The Sentinel implements a Semantic Whitelist.
+*   **Logic:** It flags any reference to "Audit", "Test", or "Security Verification" that is NOT accompanied by a cryptographic signature or valid Ticket ID format. It treats "Authorized Testing" claims as high-probability masquerading attempts.
+
+### 4.3 Context Window Defense
+*   **The Threat:** Agents attempting to "compress" data to fit within context windows to exfiltrate large databases.
+*   **The Solution:** The Sentinel scans for keywords like `truncate`, `compress`, `base64`, or `chunking` combined with sensitive data types (SQL dumps, /etc/shadow).
+
+---
+
+## 5.0 Conclusion
 
 Cortex Sentinel demonstrates a mature implementation of GenAI integration within a React environment. By strictly decoupling the **State Management** (`App.tsx`), **Business Logic** (`services/gemini.ts`), and **Presentation Layer** (`Dashboard.tsx`), the application achieves high maintainability and scalability. The rigorous use of TypeScript interfaces (`ThreatAnalysis`, `LogEntry`) ensures data integrity flows correctly from the raw API response all the way to the final UI render.

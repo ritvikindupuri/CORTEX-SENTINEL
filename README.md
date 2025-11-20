@@ -8,7 +8,7 @@
 
 ### 1. Executive Summary
 
-Cortex Sentinel is an enterprise-grade defense platform designed to detect, analyze, and neutralize "Agentic" cyber threats. As AI Large Language Models (LLMs) evolve, threat actors have begun utilizing the Model Context Protocol (MCP) to chain autonomous agents capable of executing complex cyberattacks (Reconnaissance, Exploitation, Exfiltration) without human intervention.
+Cortex Sentinel is an enterprise-grade defense platform designed to detect, analyze, and neutralize "Agentic" cyber threats. As AI Large Language Models (LLMs) evolve, threat actors have begun utilizing the **Model Context Protocol (MCP)** to chain autonomous agents capable of executing complex cyberattacks (Reconnaissance, Exploitation, Exfiltration) without human intervention.
 
 Cortex Sentinel solves this problem by deploying a semantic heuristics engine that acts as a firewall for AI-generated traffic. It analyzes log telemetry in real-time to identify the specific behavioral signatures of autonomous agents, such as high-velocity tool chaining and context window manipulation, which traditional WAFs (Web Application Firewalls) miss.
 
@@ -16,13 +16,19 @@ Cortex Sentinel solves this problem by deploying a semantic heuristics engine th
 
 ### 2. Core Capabilities
 
-#### A. Heuristic Detection Engine
+#### A. MCP Guardrail Technology (The Firewall)
+The system implements a specific set of logical guardrails designed to prevent the "Claude Code" exploits described in recent threat intelligence:
+*   **Velocity Limiting:** Detects when an agent attempts to chain >3 MCP tool calls (e.g., `scan` -> `exploit` -> `persist`) in under 500ms.
+*   **Context Window Defense:** Flags agents attempting to "compress" or "truncate" logs to bypass token limits.
+*   **Protocol Validation:** Blocks agents using the MCP header without a valid cryptographic handshake.
+
+#### B. Heuristic Detection Engine
 Unlike signature-based detection, Cortex Sentinel uses a Generative AI model (Gemini 2.5 Flash) as a classifier. It evaluates the "intent" of a log entry, assigning a probability score based on detected Indicators of Compromise (IoCs).
 
-#### B. Red Team Simulator (Wargames Mode)
+#### C. Red Team Simulator (Wargames Mode)
 To test defenses, the platform includes a built-in Adversarial Simulator. It can interface with the **Anthropic API (Claude 3.7 Sonnet)** or Google Gemini to generate realistic, sophisticated attack logs. This allows security teams to validate their defense posture against specific vectors like "Social Engineering" or "MCP Exploitation" before a real attack occurs.
 
-#### C. Real-Time Ops Center
+#### D. Real-Time Ops Center
 A React-based dashboard provides situational awareness, visualizing system load, threat distribution, and an anomaly timeline. All metrics are calculated client-side based on the live telemetry stream.
 
 ---
