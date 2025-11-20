@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Key, Check, Shield, AlertCircle, AlertTriangle } from 'lucide-react';
-import { LogEntry, ThreatAnalysis } from './types';
+import { X, Save, Key, Check, Shield, AlertCircle, AlertTriangle, Loader2, Wifi } from 'lucide-react';
+import { LogEntry, ThreatAnalysis, ThreatLevel } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -12,6 +12,8 @@ const App: React.FC = () => {
   const [claudeKey, setClaudeKey] = useState('');
   const [tempKey, setTempKey] = useState('');
   const [keyError, setKeyError] = useState('');
+  const [keySuccess, setKeySuccess] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     const storedKey = localStorage.getItem('sentinel_claude_key');
@@ -21,8 +23,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleSaveKey = () => {
+  const handleVerifyAndSaveKey = async () => {
     setKeyError('');
+    setKeySuccess('');
     const cleanedKey = tempKey.trim();
     
     if (!cleanedKey) {
@@ -30,14 +33,60 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!cleanedKey.startsWith('sk-ant-')) {
-      setKeyError('Invalid Format: Key must start with "sk-ant-"');
-      return;
-    }
+    setIsVerifying(true);
 
-    localStorage.setItem('sentinel_claude_key', cleanedKey);
-    setClaudeKey(cleanedKey);
-    setIsSettingsOpen(false); // Close on success
+    try {
+      // Attempt a minimal handshake with Claude 3.7 to verify credentials
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': cleanedKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerously-allow-browser': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-7-sonnet-20250219',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }]
+        })
+      });
+
+      if (response.ok) {
+        localStorage.setItem('sentinel_claude_key', cleanedKey);
+        setClaudeKey(cleanedKey);
+        setKeySuccess('UPLINK ESTABLISHED :: CREDENTIALS VERIFIED');
+        setTimeout(() => {
+            setIsSettingsOpen(false);
+            setKeySuccess('');
+        }, 1500);
+      } else {
+        const errorData = await response.json();
+        setKeyError(`Auth Failed: ${errorData.error?.message || 'Invalid API Key'}`);
+      }
+    } catch (error) {
+      setKeyError('Connection Failed: Unable to reach Anthropic API (CORS/Network).');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handlePurge = () => {
+    setLogs([]);
+    setKeySuccess('SYSTEM PURGED :: LOGS CLEARED');
+    setTimeout(() => setKeySuccess(''), 2000);
+  };
+
+  const handleLoadHistory = () => {
+      const sampleLogs: LogEntry[] = [
+          { id: '1', timestamp: new Date(Date.now() - 100000).toISOString(), source: 'System_Daemon', activity: 'Routine Health Check', threatLevel: ThreatLevel.LOW, details: {} as any },
+          { id: '2', timestamp: new Date(Date.now() - 80000).toISOString(), source: 'Auth_Gate', activity: 'Failed Login (User: admin)', threatLevel: ThreatLevel.MEDIUM, details: {} as any },
+          { id: '3', timestamp: new Date(Date.now() - 60000).toISOString(), source: 'MCP_Bridge', activity: 'High Velocity Tool Chain Detected', threatLevel: ThreatLevel.CRITICAL, details: {} as any },
+          { id: '4', timestamp: new Date(Date.now() - 40000).toISOString(), source: 'Firewall', activity: 'Outbound Connection Blocked (Port 4444)', threatLevel: ThreatLevel.HIGH, details: {} as any },
+      ];
+      setLogs(prev => [...prev, ...sampleLogs]);
+      setKeySuccess('HISTORY LOADED :: SIMULATION DATA INJECTED');
+      setTimeout(() => setKeySuccess(''), 2000);
   };
 
   const handleAnalysisComplete = (analysis: ThreatAnalysis) => {
@@ -60,13 +109,18 @@ const App: React.FC = () => {
         setActiveTab={setActiveTab} 
         onOpenSettings={() => {
           setKeyError(''); // Reset error when opening
+          setKeySuccess('');
           setIsSettingsOpen(true);
         }}
       />
       
       <main className="flex-1 overflow-auto relative z-10 bg-[#050505]">
-        {activeTab === 'dashboard' && <Dashboard logs={logs} />}
-        {activeTab === 'analyzer' && <Analyzer onAnalysisComplete={handleAnalysisComplete} claudeKey={claudeKey} />}
+        <div className={activeTab === 'dashboard' ? 'block h-full' : 'hidden h-full'}>
+             <Dashboard logs={logs} />
+        </div>
+        <div className={activeTab === 'analyzer' ? 'block h-full' : 'hidden h-full'}>
+             <Analyzer onAnalysisComplete={handleAnalysisComplete} claudeKey={claudeKey} />
+        </div>
         {activeTab === 'logs' && (
           <div className="flex flex-col h-full p-8 animate-in fade-in duration-500">
              <div className="flex items-center justify-between mb-6 border-b border-[#262626] pb-4">
@@ -159,32 +213,65 @@ const App: React.FC = () => {
                             value={tempKey}
                             onChange={(e) => setTempKey(e.target.value)}
                             placeholder="sk-ant-..."
-                            className={`w-full bg-black border py-2 pl-9 pr-3 text-xs text-white placeholder-[#333] focus:outline-none focus:border-blue-600 transition-colors font-mono ${keyError ? 'border-red-500' : 'border-[#333]'}`}
+                            className={`w-full bg-black border py-2 pl-9 pr-3 text-xs text-white placeholder-[#333] focus:outline-none focus:border-blue-600 transition-colors font-mono ${keyError ? 'border-red-500' : keySuccess ? 'border-emerald-500' : 'border-[#333]'}`}
                           />
                         </div>
                         <button 
-                          onClick={handleSaveKey}
-                          className="bg-blue-900/20 hover:bg-blue-900/40 border border-blue-800 text-blue-400 p-2 transition-colors"
-                          title="Save Key"
+                          onClick={handleVerifyAndSaveKey}
+                          disabled={isVerifying}
+                          className={`border p-2 transition-all duration-200 flex items-center gap-2 px-4 font-mono text-xs ${
+                              isVerifying 
+                              ? 'bg-[#171717] border-[#333] text-[#737373]'
+                              : 'bg-blue-900/20 hover:bg-blue-900/40 border-blue-800 text-blue-400'
+                          }`}
+                          title="Verify & Save"
                         >
-                          <Save size={16} />
+                          {isVerifying ? <Loader2 size={14} className="animate-spin" /> : <Wifi size={14} />}
+                          {isVerifying ? 'VERIFYING...' : 'CONNECT'}
                         </button>
                       </div>
                       
                       {keyError && (
-                        <div className="text-[10px] text-red-500 font-mono flex items-center gap-1.5 mt-1">
+                        <div className="text-[10px] text-red-500 font-mono flex items-center gap-1.5 mt-1 animate-in slide-in-from-top-1">
                            <AlertTriangle size={10} />
                            {keyError}
+                        </div>
+                      )}
+                      
+                      {keySuccess && (
+                        <div className="text-[10px] text-emerald-500 font-mono flex items-center gap-1.5 mt-1 animate-in slide-in-from-top-1">
+                           <Check size={10} />
+                           {keySuccess}
                         </div>
                       )}
 
                       <p className="text-[10px] text-[#525252] font-mono flex gap-2 items-center mt-2">
                         <AlertCircle size={10} />
-                        Key is stored locally in browser secure storage.
+                        Key is verified against Anthropic API before saving.
                       </p>
                     </div>
                  </div>
               </div>
+              
+              {/* Data Management */}
+              <div>
+                 <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">System Controls</label>
+                 <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={handleLoadHistory}
+                      className="bg-[#171717] border border-[#262626] hover:border-[#525252] p-3 text-xs font-mono text-[#d4d4d4] hover:text-white transition-colors text-left"
+                    >
+                        Load Sample History
+                    </button>
+                    <button 
+                      onClick={handlePurge}
+                      className="bg-red-950/10 border border-red-900/30 hover:bg-red-950/30 hover:border-red-500/50 p-3 text-xs font-mono text-red-400 hover:text-red-300 transition-colors text-left"
+                    >
+                        Purge System Logs
+                    </button>
+                 </div>
+              </div>
+
             </div>
 
             <div className="p-6 border-t border-[#262626] flex justify-end bg-[#0f0f0f]">
