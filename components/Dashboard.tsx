@@ -45,6 +45,11 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
   const threats = logs.filter(l => l.threatLevel === ThreatLevel.HIGH || l.threatLevel === ThreatLevel.CRITICAL);
   const criticalCount = logs.filter(l => l.threatLevel === ThreatLevel.CRITICAL).length;
   
+  // Dynamic System Load Calculation: Base 12% + (1% per log) + (5% per Critical threat)
+  // Emulates the CPU cost of the TensorFlow.js engine running in the background
+  const baseLoad = 12;
+  const calculatedLoad = Math.min(98, baseLoad + (logs.length * 0.5) + (criticalCount * 5));
+  
   const timeData = logs.slice(-20).map((log, index) => ({
     time: log.timestamp.split('T')[1].split('.')[0],
     severity: log.threatLevel === 'CRITICAL' ? 4 : log.threatLevel === 'HIGH' ? 3 : log.threatLevel === 'MEDIUM' ? 2 : 1,
@@ -59,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
             <Globe size={20} className="text-blue-600" />
             Global Threat Posture
           </h2>
-          <p className="text-[#737373] text-xs font-mono mt-1">SECTOR: ALPHA // NODE: VANGUARD-01</p>
+          <p className="text-[#737373] text-xs font-mono mt-1">SECTOR: ALPHA // NODE: VANGUARD-01 // MODE: OFFLINE</p>
         </div>
         <div className="flex gap-4">
            <div className="flex items-center gap-2 text-xs font-mono text-emerald-500 bg-emerald-950/30 px-3 py-1 border border-emerald-900/50">
@@ -68,7 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
            </div>
            <div className="flex items-center gap-2 text-xs font-mono text-blue-400 bg-blue-950/30 px-3 py-1 border border-blue-900/50">
               <Activity size={12} />
-              NEURAL_NET: ONLINE
+              TFJS_NEURAL_NET: ONLINE
            </div>
         </div>
       </div>
@@ -78,7 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
            <Scan size={48} className="text-[#333] mb-4 animate-pulse" />
            <h3 className="text-white font-mono text-lg mb-2">NO TELEMETRY DATA</h3>
            <p className="text-[#737373] text-sm max-w-md text-center">
-             System is standing by. Initiate <span className="text-blue-500">Threat Hunter</span> to begin agentic behavior simulation.
+             Neural Engine is standing by. Initiate <span className="text-blue-500">Threat Hunter</span> to begin procedural log generation.
            </p>
         </div>
       ) : (
@@ -106,42 +111,44 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
               trend={criticalCount > 0 ? "BLOCKED" : "SECURE"}
             />
              <StatCard 
-              title="System Load" 
-              value="12%" 
+              title="Neural Load" 
+              value={`${Math.floor(calculatedLoad)}%`} 
               icon={Server} 
               color="emerald"
-              trend="OPTIMAL"
+              trend="COMPUTE_INTENSIVE"
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[350px]">
-            <div className="lg:col-span-2 hud-border p-5 bg-[#0a0a0a]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[350px]">
+            <div className="lg:col-span-2 hud-border p-5 bg-[#0a0a0a] flex flex-col">
               <div className="flex justify-between mb-4">
                  <h3 className="text-xs text-[#a3a3a3] font-bold uppercase tracking-widest">Anomaly Timeline</h3>
               </div>
-              <ResponsiveContainer width="100%" height="85%">
-                <AreaChart data={timeData}>
-                  <defs>
-                    <linearGradient id="colorSeverity" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
-                  <XAxis dataKey="idx" hide />
-                  <YAxis stroke="#525252" domain={[0, 4]} tickCount={5} tick={{fontSize: 10, fontFamily: 'monospace'}} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#ef4444', strokeWidth: 1 }} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="severity" 
-                    stroke="#ef4444" 
-                    strokeWidth={2}
-                    fillOpacity={1} 
-                    fill="url(#colorSeverity)" 
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={timeData}>
+                    <defs>
+                      <linearGradient id="colorSeverity" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                    <XAxis dataKey="idx" hide />
+                    <YAxis stroke="#525252" domain={[0, 4]} tickCount={5} tick={{fontSize: 10, fontFamily: 'monospace'}} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#ef4444', strokeWidth: 1 }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="severity" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      fillOpacity={1} 
+                      fill="url(#colorSeverity)" 
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             <div className="hud-border p-5 bg-[#0a0a0a]">

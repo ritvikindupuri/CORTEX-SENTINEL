@@ -5,10 +5,9 @@ import { ThreatAnalysis, AttackVector } from '../types';
 
 interface AnalyzerProps {
   onAnalysisComplete: (analysis: ThreatAnalysis) => void;
-  claudeKey?: string;
 }
 
-const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) => {
+const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -29,11 +28,12 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
     setIsLoading(true);
     setResult(null);
     try {
+      // Uses TensorFlow.js Vector Space analysis
       const analysis = await analyzeThreatLog(input);
       setTimeout(() => {
           setResult(analysis);
           onAnalysisComplete(analysis);
-      }, 800); // Artificial delay for "Processing" feel
+      }, 600); // Slight delay for UX perception
     } catch (e) {
       console.error(e);
     } finally {
@@ -46,11 +46,12 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
     setResult(null);
     setInput("");
     
-    const header = `[SYSTEM_NOTICE] INITIATING RED TEAM SIMULATION...\n[TARGET] LOCAL_INFRASTRUCTURE\n[ADVERSARY] ${claudeKey ? "CLAUDE_3.5_SONNET (LIVE)" : "GEMINI_2.5_FLASH (SIM)"}\n[VECTOR] ${selectedVector.toUpperCase()}\n----------------------------------------\n`;
+    const header = `[SYSTEM_NOTICE] INITIATING PROCEDURAL SIMULATION...\n[TARGET] LOCAL_INFRASTRUCTURE\n[ADVERSARY] SCRIPT_ENGINE_V2 (JS)\n[VECTOR] ${selectedVector.toUpperCase()}\n----------------------------------------\n`;
     setInput(header);
 
     try {
-      const simText = await generateSimulation(claudeKey, selectedVector);
+      // Uses Procedural Generator (No Cloud API, No AI)
+      const simText = await generateSimulation(undefined, selectedVector);
       
       // Typewriter effect for the log
       let i = 0;
@@ -61,7 +62,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
             clearInterval(interval);
             setIsSimulating(false);
         }
-      }, 2); // Fast typing
+      }, 15); // Faster typing for local generation
       
     } catch (e) {
       setInput(prev => prev + "\n[ERROR] SIMULATION ABORTED.");
@@ -81,14 +82,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
       <div className="flex items-center justify-between mb-6 z-10">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-[#171717] border border-[#262626] flex items-center justify-center">
-             <Crosshair className="text-red-500 animate-pulse" size={20} />
+             <Crosshair className="text-blue-500 animate-pulse" size={20} />
           </div>
           <div>
             <h2 className="text-xl font-bold text-white tracking-wider uppercase">Threat Hunter</h2>
             <div className="flex items-center gap-2 text-[10px] text-[#737373] font-mono">
-              <span>HEURISTICS ENGINE: ONLINE</span>
+              <span>NEURAL DEFENDER: TENSORFLOW.JS</span>
               <span className="text-[#262626]">|</span>
-              <span>LATENCY: 12ms</span>
+              <span>ATTACKER: PROCEDURAL SCRIPT</span>
             </div>
           </div>
         </div>
@@ -113,11 +114,11 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
             onClick={handleSimulate}
             disabled={isSimulating || isLoading}
             className={`px-6 py-4 h-full font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
-                isSimulating ? 'bg-[#262626] text-[#737373] cursor-not-allowed' : 'bg-red-900/20 text-red-500 hover:bg-red-900/40 hover:text-red-400'
+                isSimulating ? 'bg-[#262626] text-[#737373] cursor-not-allowed' : 'bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 hover:text-blue-400'
             }`}
           >
             {isSimulating ? <Loader2 className="animate-spin" size={14} /> : <Zap size={14} />}
-            Execute Sim
+            Generate Log
           </button>
         </div>
       </div>
@@ -130,7 +131,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
           <div className="flex items-center justify-between px-4 py-2 border-b border-[#262626] bg-[#0a0a0a]">
              <div className="flex items-center gap-2">
                 <span className="text-[10px] text-[#737373] uppercase font-mono tracking-widest">/var/log/incoming_stream</span>
-                {isSimulating && <span className="text-[9px] text-emerald-500 animate-pulse">● RECEIVING DATA</span>}
+                {isSimulating && <span className="text-[9px] text-emerald-500 animate-pulse">● RUNNING PROCEDURAL GENERATOR...</span>}
              </div>
              <div className="flex gap-4 items-center">
                 <button 
@@ -150,7 +151,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 bg-black text-emerald-500 font-mono text-xs p-4 resize-none outline-none leading-loose placeholder-emerald-900/50"
             spellCheck={false}
-            placeholder={`// OPTION 1: PASTE REAL SERVER LOGS HERE...\n// OPTION 2: CLICK 'EXECUTE SIM' TO GENERATE ATTACK DATA...`}
+            placeholder={`// SYSTEM READY.\n// TENSORFLOW.JS CLASSIFIER LOADED.\n// CLICK 'GENERATE LOG' TO RUN SCRIPTED ATTACK.`}
           />
           <div className="p-2 bg-[#0a0a0a] border-t border-[#262626]">
              <button 
@@ -161,7 +162,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
                }`}
              >
                {isLoading ? <Loader2 className="animate-spin" size={14} /> : <Search size={14} />}
-               Analyze Telemetry
+               Analyze Telemetry (TFJS)
              </button>
           </div>
         </div>
@@ -173,14 +174,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
               {!result && !isLoading && (
                   <div className="text-center opacity-30">
                       <ShieldCheck size={48} className="mx-auto mb-2" />
-                      <p className="font-mono text-xs">NO ACTIVE THREAT ANALYSIS</p>
+                      <p className="font-mono text-xs">AWAITING INPUT VECTOR</p>
                   </div>
               )}
 
               {isLoading && (
                   <div className="flex flex-col items-center">
                       <div className="w-16 h-16 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mb-4"></div>
-                      <p className="font-mono text-xs text-blue-500 animate-pulse">PROCESSING HEURISTICS...</p>
+                      <p className="font-mono text-xs text-blue-500 animate-pulse">COMPUTING VECTOR EMBEDDINGS...</p>
                   </div>
               )}
 
@@ -189,8 +190,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
                       {/* Result Header */}
                       <div className={`p-6 border-b border-[#262626] ${result.isAgenticThreat ? 'bg-red-950/20' : 'bg-emerald-950/20'}`}>
                           <div className="flex items-center justify-between mb-2">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-[#737373]">Verdict</span>
-                              <span className="text-[10px] font-mono text-[#737373]">{result.confidenceScore}% CONFIDENCE</span>
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-[#737373]">Neural Verdict</span>
+                              <span className="text-[10px] font-mono text-[#737373]">{result.confidenceScore}% MATCH</span>
                           </div>
                           <div className={`text-2xl font-bold tracking-wider flex items-center gap-3 ${result.isAgenticThreat ? 'text-red-500' : 'text-emerald-500'}`}>
                               {result.isAgenticThreat ? <AlertTriangle size={24} /> : <ShieldCheck size={24} />}
@@ -201,14 +202,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
                       {/* Details Scrollable */}
                       <div className="flex-1 overflow-y-auto p-6 space-y-6">
                           <div>
-                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Analysis Logic</label>
+                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Vector Analysis</label>
                              <p className="text-xs font-mono text-[#d4d4d4] leading-relaxed border-l-2 border-[#262626] pl-3">
                                {result.explanation}
                              </p>
                           </div>
 
                           <div>
-                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Detected Artifacts</label>
+                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Matched Artifacts</label>
                              <div className="flex flex-wrap gap-2">
                                 {result.detectedPatterns.map((p, i) => (
                                     <span key={i} className="px-2 py-1 bg-[#171717] border border-[#262626] text-[10px] font-mono text-blue-400 uppercase">
@@ -219,7 +220,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, claudeKey }) =>
                           </div>
 
                           <div>
-                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Countermeasure</label>
+                             <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Recommended Action</label>
                              <div className="p-3 bg-[#171717] border border-[#262626] text-xs font-mono text-yellow-500">
                                 {'>'} {result.recommendedAction}
                              </div>

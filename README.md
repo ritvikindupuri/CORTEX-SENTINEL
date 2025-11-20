@@ -1,35 +1,35 @@
 # CORTEX SENTINEL
-## Agent Defense Platform & Heuristic Firewall
+## Neural Defense Grid (Offline Architecture)
 
 **Author:** Ritvik Indupuri
-**Version:** 1.0.5-RC
+**Version:** 2.0.0-Neural
+**Architecture:** TensorFlow.js / Client-Side WebGL
 
 ---
 
 ### 1. Executive Summary
 
-Cortex Sentinel is an enterprise-grade defense platform designed to detect, analyze, and neutralize "Agentic" cyber threats. As AI Large Language Models (LLMs) evolve, threat actors have begun utilizing the **Model Context Protocol (MCP)** to chain autonomous agents capable of executing complex cyberattacks (Reconnaissance, Exploitation, Exfiltration) without human intervention.
+Cortex Sentinel is a fully offline, browser-based cybersecurity platform designed to detect "Agentic Breakout" threats. It replaces traditional Cloud LLM APIs with a **local Neural Network (TensorFlow.js)**.
 
-Cortex Sentinel solves this problem by deploying a semantic heuristics engine that acts as a firewall for AI-generated traffic. It analyzes log telemetry in real-time to identify the specific behavioral signatures of autonomous agents, such as high-velocity tool chaining and context window manipulation, which traditional WAFs (Web Application Firewalls) miss.
+This system demonstrates the power of **Edge AI** for security. By running the **Universal Sentence Encoder (USE)** directly in the user's browser, it performs deep semantic analysis of server logs to detect anomalies, malicious intent, and MCP (Model Context Protocol) violations without a single byte of data leaving the local machine.
 
 ---
 
 ### 2. Core Capabilities
 
-#### A. MCP Guardrail Technology (The Firewall)
-The system implements a specific set of logical guardrails designed to prevent the "Claude Code" exploits described in recent threat intelligence:
-*   **Velocity Limiting:** Detects when an agent attempts to chain >3 MCP tool calls (e.g., `scan` -> `exploit` -> `persist`) in under 500ms.
-*   **Context Window Defense:** Flags agents attempting to "compress" or "truncate" logs to bypass token limits.
-*   **Protocol Validation:** Blocks agents using the MCP header without a valid cryptographic handshake.
+#### A. Neural Heuristics Engine (The Defender)
+Instead of sending logs to the cloud, Cortex Sentinel loads a 512-dimensional vector embedding model into the browser's GPU via WebGL.
+*   **Vector Space Classification:** Converts raw log text into mathematical vectors.
+*   **Cosine Similarity:** Measures the distance between the input log and known "Threat Anchors" (mathematical representations of concepts like "SQL Injection" or "Root Escalation").
+*   **Privacy First:** Zero data egress. 100% GDPR/CCPA compliant by design.
 
-#### B. Heuristic Detection Engine
-Unlike signature-based detection, Cortex Sentinel uses a Generative AI model (Gemini 2.5 Flash) as a classifier. It evaluates the "intent" of a log entry, assigning a probability score based on detected Indicators of Compromise (IoCs).
+#### B. Procedural Telemetry Generator (The Attacker)
+A sophisticated algorithmic engine that "hallucinates" realistic cyber-attack logs.
+*   **Rule-Based Synthesis:** Generates high-fidelity logs for Reconnaissance, Exploitation, and Social Engineering.
+*   **Dynamic Variables:** Randomizes IPs, timestamps, and user agents to create unique datasets for every simulation run.
 
-#### C. Red Team Simulator (Wargames Mode)
-To test defenses, the platform includes a built-in Adversarial Simulator. It can interface with the **Anthropic API (Claude 3.7 Sonnet)** or Google Gemini to generate realistic, sophisticated attack logs. This allows security teams to validate their defense posture against specific vectors like "Social Engineering" or "MCP Exploitation" before a real attack occurs.
-
-#### D. Real-Time Ops Center
-A React-based dashboard provides situational awareness, visualizing system load, threat distribution, and an anomaly timeline. All metrics are calculated client-side based on the live telemetry stream.
+#### C. Real-Time Ops Center
+A React-based dashboard providing instantaneous visibility into the Neural Net's performance, including System Load (Compute Intensity) and Threat Distribution.
 
 ---
 
@@ -38,8 +38,7 @@ A React-based dashboard provides situational awareness, visualizing system load,
 **Prerequisites:**
 - Node.js (v18 or higher)
 - NPM (v9 or higher)
-- A Google Gemini API Key (Required for the Defense Engine)
-- (Optional) Anthropic Claude API Key (Required for Red Team Simulation)
+- Modern Browser (Chrome/Edge/Firefox) with WebGL enabled
 
 **Step 1: Clone the Repository**
 ```bash
@@ -52,44 +51,31 @@ cd cortex-sentinel
 npm install
 ```
 
-**Step 3: Environment Configuration**
-The application requires a Google GenAI API key to function as the "Sentinel" (Defender).
-Create a .env file in the root directory:
-```env
-API_KEY=your_google_gemini_api_key_here
-```
-
-**Step 4: Launch Application**
+**Step 3: Launch Application**
 ```bash
 npm start
 ```
 The application will launch at http://localhost:3000.
+*Note: Upon first load, the system will download the TensorFlow.js model shards (approx 30MB). This happens once and is cached.*
 
 ---
 
-### 4. Operational Guide
+### 4. Technical Usage Guide
 
 #### Mode 1: Forensic Analysis (Manual)
-1. Navigate to the **Threat Hunter** tab.
-2. Paste raw server logs or telemetry data into the terminal console `/var/log/incoming_stream`.
+1. Navigate to **Threat Hunter**.
+2. Paste raw logs into the console.
 3. Click **ANALYZE TELEMETRY**.
-4. The system will process the text and return a JSON-structured threat assessment.
+4. The Neural Engine computes the vector embeddings and returns a threat verdict in <100ms.
 
 #### Mode 2: Adversarial Simulation
-1. Navigate to the **Threat Hunter** tab.
-2. Select an Attack Vector from the dropdown (e.g., "Social Engineering", "Reconnaissance").
-3. Click **EXECUTE SIM**.
-4. The application acts as an "Attacker Agent," generating malicious logs via the LLM API.
-5. Once the logs are generated, run the analysis to verify detection.
-
-#### Configuration
-To use the **Claude 3.7 Sonnet** model for attack simulation (highly recommended for accuracy):
-1. Click **Platform Config** in the bottom-left corner.
-2. Enter your Anthropic API Key.
-3. The key is stored securely in your browser's LocalStorage and is never sent to any backend server.
+1. Select an Attack Vector (e.g., "Exfiltration").
+2. Click **GENERATE LOG**.
+3. The Procedural Engine constructs a synthetic log entry.
+4. Analyze it to see how the Vector Space model classifies the synthetic threat.
 
 ---
 
 ### 5. Disclaimer
 
-This tool is intended for defensive security research and internal infrastructure hardening. The "Red Team" simulation features should only be used on systems where you have explicit authorization.
+This tool uses client-side machine learning for educational and research purposes. While the Universal Sentence Encoder is powerful, production security systems should rely on multi-layered defense strategies.
