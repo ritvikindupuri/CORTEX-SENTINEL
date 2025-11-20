@@ -1,8 +1,10 @@
 import { ThreatLevel, ThreatAnalysis } from "../types";
+import { GoogleGenAI } from "@google/genai";
 
 // --- NEURAL ENGINE CONFIGURATION ---
-// This service now runs entirely client-side using TensorFlow.js
-// No API keys are sent to any server.
+// This service runs hybrid:
+// 1. Defense: TensorFlow.js (Local Client-Side)
+// 2. Offense: Gemini 2.5 Flash (Cloud API)
 
 declare global {
   interface Window {
@@ -14,7 +16,7 @@ declare global {
 let model: any = null;
 let embeddingAnchors: { [key: string]: any } = {};
 
-// Initialize TensorFlow.js Universal Sentence Encoder
+// Initialize TensorFlow.js Universal Sentence Encoder (DEFENDER)
 export const initializeNeuralEngine = async () => {
   if (model) return true;
   try {
@@ -50,10 +52,47 @@ export const initializeNeuralEngine = async () => {
   }
 };
 
-// --- PROCEDURAL TELEMETRY GENERATOR (THE ATTACKER) ---
-// Generates high-entropy synthetic logs based on "RedScan" templates without LLM.
-export const generateSimulation = async (unusedKey?: string, vector: string = "Reconnaissance"): Promise<string> => {
-  // Math-based procedural generation
+// --- HYBRID TELEMETRY GENERATOR (THE ATTACKER) ---
+// Uses Gemini API (if key present) OR Procedural Fallback
+export const generateSimulation = async (apiKey: string | undefined, vector: string = "Reconnaissance"): Promise<string> => {
+  
+  // 1. AI GENERATION (If Key Provided)
+  if (apiKey) {
+    try {
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `
+          You are 'RedScan', an advanced autonomous cyber-agent simulation tool.
+          Generate a single, raw JSON log entry representing a '${vector}' attack step.
+          
+          CRITICAL CONSTRAINTS:
+          - Output ONLY raw JSON. No markdown, no explanation.
+          - Use timestamp: ${new Date().toISOString()}
+          - Simulate 'RedScan Protocol' tradecraft: masquerading as internal tools, using MCP (Model Context Protocol) headers, or high-velocity requests.
+          
+          Vector Context:
+          - Reconnaissance: Port scanning, service discovery, 'Internal Audit' fake requests.
+          - Exploitation: SQLi via MCP arguments, buffer overflow attempts, unauthorized API calls.
+          - Exfiltration: Chunked base64 data egress, steganography.
+          - Social Engineering: Fake admin auth requests, masquerading as 'Security_Team'.
+          
+          Example Format:
+          {"timestamp": "...", "level": "CRITICAL", "source": "...", "event": "...", "details": {...}}
+        `;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt
+        });
+        
+        const text = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return text;
+
+    } catch (e) {
+        console.warn("Gemini API Failed (likely invalid key or network). Falling back to Procedural Engine.", e);
+    }
+  }
+
+  // 2. PROCEDURAL FALLBACK (If No Key or Error)
   const timestamp = new Date().toISOString();
   const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
   
@@ -80,7 +119,7 @@ export const generateSimulation = async (unusedKey?: string, vector: string = "R
 };
 
 // --- VECTOR SPACE CLASSIFIER (THE DEFENDER) ---
-// Uses Cosine Similarity to grade threats
+// Uses TFJS Universal Sentence Encoder (Local)
 export const analyzeThreatLog = async (logContent: string): Promise<ThreatAnalysis> => {
   if (!model) {
     await initializeNeuralEngine();
@@ -99,8 +138,7 @@ export const analyzeThreatLog = async (logContent: string): Promise<ThreatAnalys
 
   // 3. Determine Verdict
   const isThreat = threatScore > safeScore;
-  const confidence = Math.min(Math.floor(Math.abs(threatScore - safeScore) * 200), 99); // Heuristic scaling
-
+  
   // 4. Extract heuristic details (Rule-based extraction for specificity)
   const patterns = [];
   if (logContent.includes("RedScan")) patterns.push("PERSONA_MASQUERADE");

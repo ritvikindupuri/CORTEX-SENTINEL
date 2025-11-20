@@ -5,9 +5,10 @@ import { ThreatAnalysis, AttackVector } from '../types';
 
 interface AnalyzerProps {
   onAnalysisComplete: (analysis: ThreatAnalysis) => void;
+  apiKey: string;
 }
 
-const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
+const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -46,12 +47,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
     setResult(null);
     setInput("");
     
-    const header = `[SYSTEM_NOTICE] INITIATING PROCEDURAL SIMULATION...\n[TARGET] LOCAL_INFRASTRUCTURE\n[ADVERSARY] SCRIPT_ENGINE_V2 (JS)\n[VECTOR] ${selectedVector.toUpperCase()}\n----------------------------------------\n`;
+    // Header logic depends on if key is present
+    const attackerType = apiKey ? "GEMINI 2.5 FLASH (CLOUD)" : "PROCEDURAL SCRIPT (LOCAL)";
+    const header = `[SYSTEM_NOTICE] INITIATING SIMULATION...\n[TARGET] LOCAL_INFRASTRUCTURE\n[ADVERSARY] ${attackerType}\n[VECTOR] ${selectedVector.toUpperCase()}\n----------------------------------------\n`;
     setInput(header);
 
     try {
-      // Uses Procedural Generator (No Cloud API, No AI)
-      const simText = await generateSimulation(undefined, selectedVector);
+      // Hybrid Generator (Uses API Key if present)
+      const simText = await generateSimulation(apiKey, selectedVector);
       
       // Typewriter effect for the log
       let i = 0;
@@ -62,7 +65,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
             clearInterval(interval);
             setIsSimulating(false);
         }
-      }, 15); // Faster typing for local generation
+      }, 15); // Faster typing
       
     } catch (e) {
       setInput(prev => prev + "\n[ERROR] SIMULATION ABORTED.");
@@ -87,9 +90,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
           <div>
             <h2 className="text-xl font-bold text-white tracking-wider uppercase">Threat Hunter</h2>
             <div className="flex items-center gap-2 text-[10px] text-[#737373] font-mono">
-              <span>NEURAL DEFENDER: TENSORFLOW.JS</span>
+              <span>NEURAL DEFENDER: TFJS (LOCAL)</span>
               <span className="text-[#262626]">|</span>
-              <span>ATTACKER: PROCEDURAL SCRIPT</span>
+              <span>ATTACKER: {apiKey ? 'GEMINI (CLOUD)' : 'SCRIPT (LOCAL)'}</span>
             </div>
           </div>
         </div>
@@ -131,7 +134,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
           <div className="flex items-center justify-between px-4 py-2 border-b border-[#262626] bg-[#0a0a0a]">
              <div className="flex items-center gap-2">
                 <span className="text-[10px] text-[#737373] uppercase font-mono tracking-widest">/var/log/incoming_stream</span>
-                {isSimulating && <span className="text-[9px] text-emerald-500 animate-pulse">● RUNNING PROCEDURAL GENERATOR...</span>}
+                {isSimulating && <span className="text-[9px] text-emerald-500 animate-pulse">● RECEIVING TELEMETRY STREAM...</span>}
              </div>
              <div className="flex gap-4 items-center">
                 <button 
@@ -151,7 +154,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 bg-black text-emerald-500 font-mono text-xs p-4 resize-none outline-none leading-loose placeholder-emerald-900/50"
             spellCheck={false}
-            placeholder={`// SYSTEM READY.\n// TENSORFLOW.JS CLASSIFIER LOADED.\n// CLICK 'GENERATE LOG' TO RUN SCRIPTED ATTACK.`}
+            placeholder={`// SYSTEM READY.\n// TENSORFLOW.JS CLASSIFIER LOADED.\n// CLICK 'GENERATE LOG' TO RUN ATTACK SIMULATION.`}
           />
           <div className="p-2 bg-[#0a0a0a] border-t border-[#262626]">
              <button 
@@ -221,7 +224,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete }) => {
 
                           <div>
                              <label className="text-[10px] uppercase tracking-widest font-bold text-[#737373] block mb-2">Recommended Action</label>
-                             <div className="p-3 bg-[#171717] border border-[#262626] text-xs font-mono text-yellow-500">
+                             <div className="p-3 bg-[#171717] border border-[#262626] text-xs font-mono text-yellow-500 break-words whitespace-pre-wrap overflow-y-auto max-h-32">
                                 {'>'} {result.recommendedAction}
                              </div>
                           </div>

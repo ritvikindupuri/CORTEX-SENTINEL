@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap } from 'lucide-react';
+import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key } from 'lucide-react';
 import { LogEntry, ThreatAnalysis, ThreatLevel } from './types';
 import { initializeNeuralEngine } from './services/gemini';
 
@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isNeuralLoading, setIsNeuralLoading] = useState(true);
   const [neuralStatus, setNeuralStatus] = useState("INITIALIZING...");
+  const [apiKey, setApiKey] = useState('');
 
   useEffect(() => {
     const init = async () => {
@@ -76,7 +77,7 @@ const App: React.FC = () => {
              <Dashboard logs={logs} />
         </div>
         <div className={activeTab === 'analyzer' ? 'block h-full' : 'hidden h-full'}>
-             <Analyzer onAnalysisComplete={handleAnalysisComplete} />
+             <Analyzer onAnalysisComplete={handleAnalysisComplete} apiKey={apiKey} />
         </div>
         {activeTab === 'logs' && (
           <div className="flex flex-col h-full p-8 animate-in fade-in duration-500">
@@ -136,11 +137,11 @@ const App: React.FC = () => {
             <div className="p-8 space-y-8">
               {/* Neural Engine Status */}
               <div>
-                <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">Core Logic</label>
+                <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">Defense Engine (Sentinel)</label>
                 <div className="bg-[#171717] border border-[#262626] p-4 flex justify-between items-center">
                   <div>
-                    <div className="text-sm text-white font-mono font-bold">TENSORFLOW.JS (Universal Sentence Encoder)</div>
-                    <div className="text-xs text-[#737373]">512-Dim Vector Space Classifier</div>
+                    <div className="text-sm text-white font-mono font-bold">TENSORFLOW.JS (WebGL)</div>
+                    <div className="text-xs text-[#737373]">Universal Sentence Encoder (Local)</div>
                   </div>
                   <div className="flex items-center gap-2 px-2 py-1 bg-emerald-950/30 border border-emerald-900/50 text-[10px] text-emerald-500 font-mono uppercase">
                      <Cpu size={10} />
@@ -151,16 +152,32 @@ const App: React.FC = () => {
 
                {/* Attacker Status */}
                <div>
-                <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">Adversary Simulation</label>
-                <div className="bg-[#171717] border border-[#262626] p-4 flex justify-between items-center">
-                  <div>
-                    <div className="text-sm text-red-400 font-mono font-bold">PROCEDURAL TELEMETRY ENGINE</div>
-                    <div className="text-xs text-[#737373]">Synthetic Log Generator (Local)</div>
+                <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">Red Team Agent (Adversary)</label>
+                <div className="bg-[#171717] border border-[#262626] p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-blue-400 font-mono font-bold">GEMINI 2.5 FLASH (Hybrid)</div>
+                      <div className="text-xs text-[#737373]">Generative AI Attack Simulation</div>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 py-1 bg-blue-950/30 border border-blue-900/50 text-[10px] text-blue-500 font-mono uppercase">
+                       <Zap size={10} />
+                       {apiKey ? 'CONNECTED' : 'OFFLINE (FALLBACK ACTIVE)'}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 px-2 py-1 bg-blue-950/30 border border-blue-900/50 text-[10px] text-blue-500 font-mono uppercase">
-                     <Zap size={10} />
-                     READY
+                  
+                  <div className="relative">
+                     <Key className="absolute left-3 top-2.5 text-[#525252]" size={14} />
+                     <input 
+                        type="password" 
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="Enter Gemini API Key for AI Generation"
+                        className="w-full bg-black border border-[#262626] text-white text-xs font-mono py-2 pl-10 pr-3 focus:border-blue-500 outline-none transition-colors placeholder-[#333]"
+                     />
                   </div>
+                  <p className="text-[9px] text-[#525252]">
+                    Without a key, the system reverts to Procedural Script Generation (Math-based randomness).
+                  </p>
                 </div>
               </div>
               
