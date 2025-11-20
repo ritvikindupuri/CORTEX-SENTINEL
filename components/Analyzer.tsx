@@ -194,7 +194,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey }) => {
                       <div className={`p-6 border-b border-[#262626] ${result.isAgenticThreat ? 'bg-red-950/20' : 'bg-emerald-950/20'}`}>
                           <div className="flex items-center justify-between mb-2">
                               <span className="text-[10px] uppercase tracking-widest font-bold text-[#737373]">Neural Verdict</span>
-                              <span className="text-[10px] font-mono text-[#737373]">{result.confidenceScore}% MATCH</span>
+                              <span className="text-[10px] font-mono text-[#737373]">{result.confidenceScore.toFixed(0)}% MATCH</span>
                           </div>
                           <div className={`text-2xl font-bold tracking-wider flex items-center gap-3 ${result.isAgenticThreat ? 'text-red-500' : 'text-emerald-500'}`}>
                               {result.isAgenticThreat ? <AlertTriangle size={24} /> : <ShieldCheck size={24} />}

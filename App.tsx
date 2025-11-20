@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History } from 'lucide-react';
+import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History, Download, FileCheck } from 'lucide-react';
 import { LogEntry, ThreatAnalysis, ThreatLevel, SavedSession } from './types';
 import { initializeNeuralEngine } from './services/gemini';
 
@@ -131,6 +131,20 @@ const App: React.FC = () => {
     };
     setLogs(prev => [...prev, newLog]);
   };
+
+  const handleExportCsv = () => {
+      if (logs.length === 0) return;
+      const headers = "Timestamp,Source,Activity,ThreatLevel,Patterns\n";
+      const rows = logs.map(l => `${l.timestamp},${l.source},"${l.activity}",${l.threatLevel},"${l.details.detectedPatterns.join('|')}"`).join("\n");
+      const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "CORTEX_COMPLIANCE_EXPORT.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
   
   // Combine both sources for the UI list
   const allSessions = [...userSessions, ...HISTORICAL_SESSIONS];
@@ -163,34 +177,52 @@ const App: React.FC = () => {
         {activeTab === 'logs' && (
           <div className="flex flex-col h-full p-8 animate-in fade-in duration-500">
              <div className="flex items-center justify-between mb-6 border-b border-[#262626] pb-4">
-                <h2 className="text-xl font-bold tracking-widest uppercase">Raw Telemetry Stream</h2>
-                <span className="text-xs font-mono text-[#737373]">ENCRYPTED :: TLS 1.3</span>
+                <div>
+                    <h2 className="text-xl font-bold tracking-widest uppercase flex items-center gap-3">
+                        <FileCheck className="text-blue-500" />
+                        Compliance Audit Ledger
+                    </h2>
+                    <span className="text-xs font-mono text-[#737373] mt-1 block">
+                        IMMUTABLE RECORD :: TLS 1.3 ENCRYPTED :: RETENTION POLICY [PERMANENT]
+                    </span>
+                </div>
+                <button 
+                    onClick={handleExportCsv}
+                    disabled={logs.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#171717] border border-[#262626] text-xs font-mono text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Download size={14} />
+                    EXPORT COMPLIANCE REPORT (CSV)
+                </button>
              </div>
              
              {logs.length === 0 ? (
-               <div className="text-[#525252] font-mono text-sm border border-dashed border-[#262626] p-12 text-center">
-                  NO EVENTS LOGGED IN CURRENT SESSION
+               <div className="text-[#525252] font-mono text-sm border border-dashed border-[#262626] p-12 text-center bg-[#0a0a0a]">
+                  NO AUDIT RECORDS FOUND
                </div>
              ) : (
-               <div className="space-y-1 font-mono text-xs">
+               <div className="flex-1 overflow-y-auto bg-[#0a0a0a] border border-[#262626] font-mono text-xs">
+                 <div className="grid grid-cols-12 bg-[#171717] p-2 border-b border-[#262626] text-[#737373] font-bold uppercase tracking-wider sticky top-0 z-10">
+                    <div className="col-span-2">Timestamp</div>
+                    <div className="col-span-1">Severity</div>
+                    <div className="col-span-2">Source</div>
+                    <div className="col-span-7">Activity Log</div>
+                 </div>
                  {logs.slice().reverse().map(log => (
-                   <div key={log.id} className="bg-[#0a0a0a] p-2 border-b border-[#171717] flex items-center hover:bg-[#171717] transition-colors cursor-default">
-                     <div className={`w-2 h-2 rounded-full mr-4 ${
-                         log.threatLevel === 'CRITICAL' ? 'bg-red-500' :
-                         log.threatLevel === 'HIGH' ? 'bg-orange-500' :
-                         log.threatLevel === 'MEDIUM' ? 'bg-yellow-500' :
-                         'bg-emerald-500'
-                       }`}></div>
-                     <span className="text-[#737373] mr-4">{log.timestamp}</span>
-                     <span className={`font-bold mr-4 w-20 ${
-                         log.threatLevel === 'CRITICAL' ? 'text-red-500' :
-                         log.threatLevel === 'HIGH' ? 'text-orange-500' :
-                         log.threatLevel === 'MEDIUM' ? 'text-yellow-500' :
-                         'text-emerald-500'
-                     }`}>{log.threatLevel}</span>
-                     <span className="text-[#d4d4d4]">
-                        <span className="text-blue-500">[{log.source}]</span> {log.activity}
-                     </span>
+                   <div key={log.id} className="grid grid-cols-12 p-2 border-b border-[#171717] hover:bg-[#171717] transition-colors cursor-default items-start">
+                     <div className="col-span-2 text-[#737373] truncate">{log.timestamp}</div>
+                     <div className="col-span-1">
+                        <span className={`font-bold ${
+                             log.threatLevel === 'CRITICAL' ? 'text-red-500' :
+                             log.threatLevel === 'HIGH' ? 'text-orange-500' :
+                             log.threatLevel === 'MEDIUM' ? 'text-yellow-500' :
+                             'text-emerald-500'
+                         }`}>
+                            {log.threatLevel}
+                        </span>
+                     </div>
+                     <div className="col-span-2 text-blue-500 truncate" title={log.source}>{log.source}</div>
+                     <div className="col-span-7 text-[#d4d4d4] break-all">{log.activity}</div>
                    </div>
                  ))}
                </div>

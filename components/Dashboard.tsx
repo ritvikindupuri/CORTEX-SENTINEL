@@ -42,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
-  const threats = logs.filter(l => l.threatLevel === ThreatLevel.HIGH || l.threatLevel === ThreatLevel.CRITICAL);
+  const threats = logs.filter(l => l.details.isAgenticThreat === true);
   const criticalCount = logs.filter(l => l.threatLevel === ThreatLevel.CRITICAL).length;
   
   // Dynamic System Load Calculation: Base 12% + (1% per log) + (5% per Critical threat)
