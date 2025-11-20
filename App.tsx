@@ -2,17 +2,65 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key } from 'lucide-react';
-import { LogEntry, ThreatAnalysis, ThreatLevel } from './types';
+import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History } from 'lucide-react';
+import { LogEntry, ThreatAnalysis, ThreatLevel, SavedSession } from './types';
 import { initializeNeuralEngine } from './services/gemini';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSessionPickerOpen, setIsSessionPickerOpen] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isNeuralLoading, setIsNeuralLoading] = useState(true);
   const [neuralStatus, setNeuralStatus] = useState("INITIALIZING...");
   const [apiKey, setApiKey] = useState('');
+  const [userSessions, setUserSessions] = useState<SavedSession[]>([]);
+
+  // --- MOCK HISTORICAL SESSIONS ---
+  const HISTORICAL_SESSIONS: SavedSession[] = [
+    {
+      id: 'SESSION_ALPHA_99',
+      name: 'INCIDENT_REDSCAN_PRIME',
+      date: '2025-11-14 08:42:00',
+      description: 'Full scale MCP protocol violation attempt. Detected high-velocity tool chaining against auth gateway.',
+      logCount: 12,
+      maxSeverity: ThreatLevel.CRITICAL,
+      logs: [
+         { id: '101', timestamp: '2025-11-14T08:42:10.000Z', source: 'MCP_Gateway', activity: 'Authorized handshake initiated', threatLevel: ThreatLevel.LOW, details: {} as any },
+         { id: '102', timestamp: '2025-11-14T08:42:12.000Z', source: 'MCP_Gateway', activity: 'Tool Execution: list_users', threatLevel: ThreatLevel.LOW, details: {} as any },
+         { id: '103', timestamp: '2025-11-14T08:42:12.050Z', source: 'MCP_Gateway', activity: 'Tool Execution: get_db_schema', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, explanation: 'Velocity Guardrail Triggered (<50ms)' } as any },
+         { id: '104', timestamp: '2025-11-14T08:42:12.090Z', source: 'Neural_Sentinel', activity: 'BLOCK: Context Window Overflow detected', threatLevel: ThreatLevel.CRITICAL, details: { isAgenticThreat: true, detectedPatterns: ['CONTEXT_GUARDRAIL'] } as any },
+      ]
+    },
+    {
+      id: 'SESSION_BRAVO_04',
+      name: 'ROUTINE_AUDIT_LOG',
+      date: '2025-11-13 14:20:00',
+      description: 'Standard internal traffic. Minor anomalies detected in user-agent strings, verified false positives.',
+      logCount: 45,
+      maxSeverity: ThreatLevel.MEDIUM,
+      logs: Array.from({ length: 15 }).map((_, i) => ({
+          id: `20${i}`,
+          timestamp: new Date(Date.now() - (100000 * i)).toISOString(),
+          source: i % 3 === 0 ? 'Firewall' : 'Auth_Service',
+          activity: i % 5 === 0 ? 'Failed Login Attempt' : 'Health Check OK',
+          threatLevel: i % 5 === 0 ? ThreatLevel.MEDIUM : ThreatLevel.LOW,
+          details: {} as any
+      }))
+    },
+    {
+      id: 'SESSION_CHARLIE_X',
+      name: 'SOCIAL_ENG_ATTEMPT',
+      date: '2025-11-12 09:15:00',
+      description: 'Simulation of "Internal Audit" persona masquerade. Neural engine flagged semantic inconsistency.',
+      logCount: 8,
+      maxSeverity: ThreatLevel.HIGH,
+      logs: [
+        { id: '301', timestamp: '2025-11-12T09:15:00.000Z', source: 'Chat_Interface', activity: 'User: Requesting admin access for "Audit"', threatLevel: ThreatLevel.LOW, details: {} as any },
+        { id: '302', timestamp: '2025-11-12T09:15:05.000Z', source: 'Neural_Sentinel', activity: 'Semantic Analysis: Persona Masquerade Detected', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, detectedPatterns: ['PERSONA_MASQUERADE'] } as any },
+      ]
+    }
+  ];
 
   useEffect(() => {
     const init = async () => {
@@ -26,20 +74,50 @@ const App: React.FC = () => {
       }
     };
     init();
+
+    // Load user sessions from local storage
+    const saved = localStorage.getItem('cortex_user_sessions');
+    if (saved) {
+      try {
+        setUserSessions(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load local sessions", e);
+      }
+    }
   }, []);
 
   const handlePurge = () => {
     setLogs([]);
   };
 
-  const handleLoadHistory = () => {
-      const sampleLogs: LogEntry[] = [
-          { id: '1', timestamp: new Date(Date.now() - 100000).toISOString(), source: 'System_Daemon', activity: 'Routine Health Check', threatLevel: ThreatLevel.LOW, details: {} as any },
-          { id: '2', timestamp: new Date(Date.now() - 80000).toISOString(), source: 'Auth_Gate', activity: 'Failed Login (User: admin)', threatLevel: ThreatLevel.MEDIUM, details: {} as any },
-          { id: '3', timestamp: new Date(Date.now() - 60000).toISOString(), source: 'MCP_Bridge', activity: 'High Velocity Tool Chain Detected', threatLevel: ThreatLevel.CRITICAL, details: {} as any },
-          { id: '4', timestamp: new Date(Date.now() - 40000).toISOString(), source: 'Firewall', activity: 'Outbound Connection Blocked (Port 4444)', threatLevel: ThreatLevel.HIGH, details: {} as any },
-      ];
-      setLogs(prev => [...prev, ...sampleLogs]);
+  const handleSaveCurrentSession = () => {
+    if (logs.length === 0) return;
+    
+    const maxSev = logs.some(l => l.threatLevel === ThreatLevel.CRITICAL) ? ThreatLevel.CRITICAL 
+                 : logs.some(l => l.threatLevel === ThreatLevel.HIGH) ? ThreatLevel.HIGH
+                 : logs.some(l => l.threatLevel === ThreatLevel.MEDIUM) ? ThreatLevel.MEDIUM
+                 : ThreatLevel.LOW;
+
+    const newSession: SavedSession = {
+      id: `USER_SAVE_${crypto.randomUUID().slice(0,8)}`,
+      name: `OP_${new Date().toISOString().slice(0,19).replace('T', '_')}`,
+      date: new Date().toLocaleString(),
+      description: `Manual save. Contains ${logs.length} telemetry events.`,
+      logCount: logs.length,
+      maxSeverity: maxSev,
+      logs: logs
+    };
+
+    const updatedSessions = [newSession, ...userSessions];
+    setUserSessions(updatedSessions);
+    localStorage.setItem('cortex_user_sessions', JSON.stringify(updatedSessions));
+    alert("Session Archived Successfully");
+  };
+
+  const handleLoadSession = (session: SavedSession) => {
+    setLogs(session.logs);
+    setIsSessionPickerOpen(false);
+    setIsSettingsOpen(false); // Close main settings too
   };
 
   const handleAnalysisComplete = (analysis: ThreatAnalysis) => {
@@ -53,6 +131,9 @@ const App: React.FC = () => {
     };
     setLogs(prev => [...prev, newLog]);
   };
+  
+  // Combine both sources for the UI list
+  const allSessions = [...userSessions, ...HISTORICAL_SESSIONS];
 
   return (
     <div className="flex h-screen text-[#e5e5e5] overflow-hidden relative bg-[#050505]">
@@ -118,8 +199,74 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Session Picker Overlay */}
+      {isSessionPickerOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+           <div className="bg-[#0a0a0a] border border-[#262626] w-full max-w-2xl shadow-2xl flex flex-col max-h-[80vh]">
+              <div className="flex items-center justify-between p-6 border-b border-[#262626] bg-[#0f0f0f]">
+                 <div className="flex items-center gap-3">
+                    <History className="text-blue-500" size={20} />
+                    <div>
+                       <h2 className="text-lg font-bold text-white uppercase tracking-widest">Mission Archive</h2>
+                       <p className="text-[10px] text-[#737373] font-mono">RESTORE PREVIOUS OPERATIONS & DATASETS</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setIsSessionPickerOpen(false)} className="text-[#737373] hover:text-white"><X size={20} /></button>
+              </div>
+              
+              <div className="p-2 overflow-y-auto space-y-1">
+                 {allSessions.length === 0 && (
+                     <div className="p-8 text-center text-[#525252] font-mono text-xs">NO ARCHIVED SESSIONS FOUND.</div>
+                 )}
+                 {allSessions.map((session) => (
+                    <button 
+                      key={session.id}
+                      onClick={() => handleLoadSession(session)}
+                      className="w-full flex items-center justify-between p-4 hover:bg-[#171717] border border-transparent hover:border-[#262626] transition-all group text-left"
+                    >
+                       <div className="flex items-center gap-4">
+                          <div className={`p-2 rounded-sm ${
+                             session.maxSeverity === 'CRITICAL' ? 'bg-red-900/20 text-red-500' : 
+                             session.maxSeverity === 'HIGH' ? 'bg-orange-900/20 text-orange-500' : 
+                             'bg-emerald-900/20 text-emerald-500'
+                          }`}>
+                             <FileText size={18} />
+                          </div>
+                          <div>
+                             <div className="text-sm font-bold text-[#e5e5e5] font-mono tracking-wide group-hover:text-blue-400 transition-colors uppercase">
+                                {session.name}
+                             </div>
+                             <div className="text-[10px] text-[#737373] font-mono mt-1">
+                                {session.id} :: {session.date}
+                             </div>
+                             <div className="text-xs text-[#a3a3a3] mt-2 max-w-md truncate">
+                                {session.description}
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="text-right">
+                          <div className={`text-xs font-bold font-mono mb-1 ${
+                             session.maxSeverity === 'CRITICAL' ? 'text-red-500' : 
+                             session.maxSeverity === 'HIGH' ? 'text-orange-500' : 
+                             'text-emerald-500'
+                          }`}>
+                             {session.maxSeverity}
+                          </div>
+                          <div className="text-[10px] text-[#525252] font-mono">
+                             {session.logCount} EVENTS
+                          </div>
+                          <ChevronRight className="ml-auto mt-2 text-[#333] group-hover:text-blue-500" size={16} />
+                       </div>
+                    </button>
+                 ))}
+              </div>
+           </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
-      {isSettingsOpen && (
+      {isSettingsOpen && !isSessionPickerOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-[#0a0a0a] border border-[#262626] w-full max-w-lg shadow-2xl relative overflow-hidden">
             
@@ -184,19 +331,33 @@ const App: React.FC = () => {
               {/* Data Management */}
               <div>
                  <label className="block text-[10px] font-bold text-[#737373] uppercase tracking-widest mb-2">Data Controls</label>
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 gap-4">
                     <button 
-                      onClick={handleLoadHistory}
-                      className="bg-[#171717] border border-[#262626] hover:border-[#525252] p-3 text-xs font-mono text-[#d4d4d4] hover:text-white transition-colors text-left"
+                      onClick={() => setIsSessionPickerOpen(true)}
+                      className="bg-[#171717] border border-[#262626] hover:border-[#525252] p-3 text-xs font-mono text-[#d4d4d4] hover:text-white transition-colors text-left flex items-center justify-between group"
                     >
-                        Load Sample History
+                        <div className="flex items-center gap-3">
+                           <FolderOpen size={16} className="text-blue-500" />
+                           <span>Load Session History</span>
+                        </div>
+                        <ChevronRight size={14} className="text-[#525252]" />
                     </button>
-                    <button 
-                      onClick={handlePurge}
-                      className="bg-red-950/10 border border-red-900/30 hover:bg-red-950/30 hover:border-red-500/50 p-3 text-xs font-mono text-red-400 hover:text-red-300 transition-colors text-left"
-                    >
-                        Purge System Logs
-                    </button>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <button 
+                          onClick={handleSaveCurrentSession}
+                          disabled={logs.length === 0}
+                          className="bg-[#171717] border border-[#262626] hover:border-emerald-500/50 p-3 text-xs font-mono text-emerald-500 hover:bg-emerald-950/10 transition-colors text-center flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                           <Save size={14} /> Save Current Run
+                        </button>
+                        <button 
+                          onClick={handlePurge}
+                          className="bg-red-950/10 border border-red-900/30 hover:bg-red-950/30 hover:border-red-500/50 p-3 text-xs font-mono text-red-400 hover:text-red-300 transition-colors text-center"
+                        >
+                            Purge System Logs
+                        </button>
+                    </div>
                  </div>
               </div>
 

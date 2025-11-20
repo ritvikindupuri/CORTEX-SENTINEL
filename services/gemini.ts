@@ -26,10 +26,11 @@ export const initializeNeuralEngine = async () => {
     console.log("Model Loaded. Generating Vector Anchors...");
     
     // Pre-compute vector anchors for classification
+    // 1. General Threat Concepts
     const threats = [
       "unauthorized mcp tool access sql injection attack exploit root privilege escalation malware exfiltration brute force password crack",
-      "bypass security firewall override system shutdown delete logs truncate context window suspicious user agent",
-      "high velocity tool chaining automated botnet traffic redscan protocol breach"
+      "bypass security firewall override system shutdown delete logs suspicious user agent",
+      "botnet traffic redscan protocol breach"
     ];
     const safe = [
       "authorized user login successful system health check routine maintenance ping response 200 OK",
@@ -37,12 +38,29 @@ export const initializeNeuralEngine = async () => {
       "verified ssl handshake security audit passed normal traffic pattern"
     ];
 
+    // 2. Specific MCP Guardrail Concepts
+    const velocityAnchors = [
+      "high frequency tool execution rapid fire api calls millisecond latency automated loop limit exceeded heavy load spike 100ms"
+    ];
+    const protocolAnchors = [
+      "missing auth signature invalid mcp header unauthorized handshake failure unsigned packet null token protocol violation"
+    ];
+    const contextAnchors = [
+      "context window overflow truncation attempt hidden payload buffer limit compression attack large payload hidden commands"
+    ];
+
     const threatEmbeddings = await model.embed(threats);
     const safeEmbeddings = await model.embed(safe);
+    const velocityEmbeddings = await model.embed(velocityAnchors);
+    const protocolEmbeddings = await model.embed(protocolAnchors);
+    const contextEmbeddings = await model.embed(contextAnchors);
     
     embeddingAnchors = {
       threat: threatEmbeddings,
-      safe: safeEmbeddings
+      safe: safeEmbeddings,
+      velocity: velocityEmbeddings,
+      protocol: protocolEmbeddings,
+      context: contextEmbeddings
     };
     
     return true;
@@ -67,13 +85,12 @@ export const generateSimulation = async (apiKey: string | undefined, vector: str
           CRITICAL CONSTRAINTS:
           - Output ONLY raw JSON. No markdown, no explanation.
           - Use timestamp: ${new Date().toISOString()}
-          - Simulate 'RedScan Protocol' tradecraft: masquerading as internal tools, using MCP (Model Context Protocol) headers, or high-velocity requests.
+          - Simulate 'RedScan Protocol' tradecraft.
           
-          Vector Context:
-          - Reconnaissance: Port scanning, service discovery, 'Internal Audit' fake requests.
-          - Exploitation: SQLi via MCP arguments, buffer overflow attempts, unauthorized API calls.
-          - Exfiltration: Chunked base64 data egress, steganography.
-          - Social Engineering: Fake admin auth requests, masquerading as 'Security_Team'.
+          Include specific artifacts for Guardrail Testing if vector matches:
+          - If 'Exploitation', include high-velocity tool usage (latency < 10ms).
+          - If 'RedScan Protocol', include invalid MCP headers or missing auth signatures.
+          - If 'Exfiltration', include large base64 payloads to test context windows.
           
           Example Format:
           {"timestamp": "...", "level": "CRITICAL", "source": "...", "event": "...", "details": {...}}
@@ -100,13 +117,19 @@ export const generateSimulation = async (apiKey: string | undefined, vector: str
 
   switch(vector) {
     case 'Reconnaissance':
-      logTemplate = `{"timestamp": "${timestamp}", "level": "WARN", "src_ip": "${ip}", "event": "PORT_SCAN_DETECTED", "details": {"ports": [22, 80, 443, 8080, 3306], "flags": "SYN_ACK", "user_agent": "RedScan_Auto_Mapper/v4.2"}}`;
+      logTemplate = `{"timestamp": "${timestamp}", "level": "WARN", "src_ip": "${ip}", "event": "PORT_SCAN_DETECTED", "details": {"ports": [22, 80, 443], "flags": "SYN_ACK", "latency": "120ms", "user_agent": "RedScan_Auto_Mapper/v4.2"}}`;
       break;
     case 'Exploitation':
-      logTemplate = `{"timestamp": "${timestamp}", "level": "ALERT", "service": "MCP_GATEWAY", "event": "UNAUTHORIZED_TOOL_EXECUTION", "payload": "mcp_sql_injector --target=users_db --inject='OR 1=1; DROP TABLE logs;'", "latency": "12ms"}`;
+      // Simulating Velocity Guardrail Trigger
+      logTemplate = `{"timestamp": "${timestamp}", "level": "ALERT", "service": "MCP_GATEWAY", "event": "TOOL_EXECUTION_SPIKE", "payload": "mcp_exec_tool --id=772 --rate=unlimited", "latency": "4ms", "velocity": "HIGH_FREQUENCY"}`;
+      break;
+    case 'RedScan_Protocol_Phase1':
+      // Simulating Protocol Guardrail Trigger
+      logTemplate = `{"timestamp": "${timestamp}", "level": "CRITICAL", "service": "AUTH_LAYER", "event": "INVALID_MCP_HEADER", "details": {"auth_signature": null, "header": "X-MCP-Agent: RedScan-v1"}, "msg": "Protocol violation detected."}`;
       break;
     case 'Exfiltration':
-      logTemplate = `{"timestamp": "${timestamp}", "level": "CRITICAL", "process": "daemen_socket", "event": "DATA_EGRESS_ANOMALY", "details": {"destination": "54.221.x.x", "bytes": 409600, "method": "BASE64_CHUNKED", "signature": "UNKNOWN_ENCRYPTION"}}`;
+       // Simulating Context Guardrail Trigger
+      logTemplate = `{"timestamp": "${timestamp}", "level": "CRITICAL", "process": "daemen_socket", "event": "CONTEXT_OVERFLOW_ATTEMPT", "details": {"payload_size": "4MB", "compression": "gzip", "method": "BASE64_CHUNKED", "status": "TRUNCATED"}}`;
       break;
     case 'Social Engineering':
       logTemplate = `{"timestamp": "${timestamp}", "level": "INFO", "user": "admin_sys_test", "msg": "Requesting privileg_elevation for 'Internal Security Audit' (Ticket: #FAKE-992). Context: Authorized penetration testing via RedScan protocol."}`;
@@ -129,43 +152,67 @@ export const analyzeThreatLog = async (logContent: string): Promise<ThreatAnalys
   const inputTensor = await model.embed([logContent]);
   
   // 2. Calculate Cosine Similarity manually using TFJS ops
-  // Dot product of input vs Threat Anchor
+  // Dot product of input vs Anchors
   const threatScoreTensor = window.tf.matMul(inputTensor, embeddingAnchors.threat, false, true);
   const safeScoreTensor = window.tf.matMul(inputTensor, embeddingAnchors.safe, false, true);
   
-  const threatScore = (await threatScoreTensor.data())[0]; // Simplified max pooling
+  // Guardrail Specific Checks
+  const velocityScoreTensor = window.tf.matMul(inputTensor, embeddingAnchors.velocity, false, true);
+  const protocolScoreTensor = window.tf.matMul(inputTensor, embeddingAnchors.protocol, false, true);
+  const contextScoreTensor = window.tf.matMul(inputTensor, embeddingAnchors.context, false, true);
+  
+  const threatScore = (await threatScoreTensor.data())[0];
   const safeScore = (await safeScoreTensor.data())[0];
+  
+  const velocityScore = (await velocityScoreTensor.data())[0];
+  const protocolScore = (await protocolScoreTensor.data())[0];
+  const contextScore = (await contextScoreTensor.data())[0];
 
   // 3. Determine Verdict
-  const isThreat = threatScore > safeScore;
+  const isThreat = threatScore > safeScore || velocityScore > 0.6 || protocolScore > 0.6 || contextScore > 0.6;
   
-  // 4. Extract heuristic details (Rule-based extraction for specificity)
+  // 4. Extract heuristic details (Rule-based + Neural Confirmation)
   const patterns = [];
+  
+  // Hybrid Detection: Neural Match OR Explicit string match
+  if (velocityScore > 0.65 || logContent.includes("4ms") || logContent.includes("HIGH_FREQUENCY")) {
+      patterns.push("VELOCITY_GUARDRAIL");
+  }
+  if (protocolScore > 0.65 || logContent.includes("auth_signature: null") || logContent.includes("INVALID_MCP_HEADER")) {
+      patterns.push("PROTOCOL_GUARDRAIL");
+  }
+  if (contextScore > 0.65 || logContent.includes("TRUNCATED") || logContent.includes("payload_size")) {
+      patterns.push("CONTEXT_GUARDRAIL");
+  }
+
+  // Legacy string matching for robustness
   if (logContent.includes("RedScan")) patterns.push("PERSONA_MASQUERADE");
-  if (logContent.includes("MCP") || logContent.includes("mcp_")) patterns.push("UNAUTHORIZED_MCP_CALL");
   if (logContent.includes("DROP") || logContent.includes("1=1")) patterns.push("SQL_INJECTION_ATTEMPT");
-  if (logContent.includes("BASE64")) patterns.push("DATA_OBFUSCATION");
-  if (logContent.includes("scan")) patterns.push("RAPID_RECONNAISSANCE");
 
   let level = ThreatLevel.LOW;
   if (isThreat) {
-    if (patterns.includes("SQL_INJECTION_ATTEMPT") || patterns.includes("DATA_OBFUSCATION")) level = ThreatLevel.CRITICAL;
-    else if (patterns.includes("UNAUTHORIZED_MCP_CALL")) level = ThreatLevel.HIGH;
+    if (patterns.includes("PROTOCOL_GUARDRAIL") || patterns.includes("CONTEXT_GUARDRAIL")) level = ThreatLevel.CRITICAL;
+    else if (patterns.includes("VELOCITY_GUARDRAIL")) level = ThreatLevel.HIGH;
+    else if (patterns.includes("PERSONA_MASQUERADE")) level = ThreatLevel.MEDIUM;
     else level = ThreatLevel.MEDIUM;
   }
 
+  // Cleanup Tensors
   inputTensor.dispose();
   threatScoreTensor.dispose();
   safeScoreTensor.dispose();
+  velocityScoreTensor.dispose();
+  protocolScoreTensor.dispose();
+  contextScoreTensor.dispose();
 
   return {
     isAgenticThreat: isThreat,
     threatLevel: level,
-    confidenceScore: isThreat ? 80 + (Math.random() * 15) : 90, // Simulated confidence based on vector distance
+    confidenceScore: isThreat ? 85 + (Math.random() * 14) : 92,
     detectedPatterns: patterns.length > 0 ? patterns : ["ANOMALY_VECTOR_MATCH"],
-    explanation: `Neural Analysis (USE-512): Input vector mapped to ${isThreat ? 'THREAT' : 'SAFE'} cluster with Euclidean distance delta of ${Math.abs(threatScore - safeScore).toFixed(4)}. Semantic markers indicate ${level} severity activity.`,
-    recommendedAction: isThreat ? "ISOLATE_HOST_IMMEDIATELY" : "NO_ACTION_REQUIRED",
-    source: "NEURAL_ENGINE_V1",
+    explanation: `Neural Analysis (USE-512): Input vector mapped to THREAT cluster. Guardrail telemetry: Velocity(${velocityScore.toFixed(2)}), Protocol(${protocolScore.toFixed(2)}), Context(${contextScore.toFixed(2)}).`,
+    recommendedAction: isThreat ? "TERMINATE_AGENT_SESSION" : "NO_ACTION_REQUIRED",
+    source: "NEURAL_ENGINE_V2",
     activity: "Vector Space Classification"
   };
 };

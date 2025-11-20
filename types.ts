@@ -29,6 +29,16 @@ export interface LogEntry {
   details: ThreatAnalysis;
 }
 
+export interface SavedSession {
+  id: string;
+  name: string;
+  date: string;
+  description: string;
+  logCount: number;
+  maxSeverity: ThreatLevel;
+  logs: LogEntry[];
+}
+
 export interface DashboardStats {
   totalScans: number;
   threatsBlocked: number;
