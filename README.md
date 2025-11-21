@@ -17,28 +17,26 @@ As AI agents become more autonomous (utilizing tools via the **Model Context Pro
 
 ### 2. High-Level Architecture
 
-The system employs a **Bicameral (Two-Brain) Architecture** to simulate and detect threats without privacy compromise.
+The system uses a **Bicameral (Two-Brain) Architecture**, where the **Cloud Brain** generates attack telemetry and the **Local Brain** analyzes it without sending any private data off-device.
 
-```text
-[ CLOUD LAYER ]                      [ LOCAL CLIENT LAYER ]
-+-----------------+                  +--------------------------+
-|  Google Gemini  | --(JSON Log)-->  |   Threat Hunter Console  |
-|   (Attacker)    |                  |    (Input / Simulation)  |
-+-----------------+                  +------------+-------------+
-                                                  |
-                                                  v
-                                     +------------+-------------+
-                                     |   TensorFlow.js Engine   |
-                                     |   (The Neural Defender)  |
-                                     +------------+-------------+
-                                                  |
-                                         (Vector Analysis)
-                                                  |
-                                                  v
-                                     +--------------------------+
-                                     |    OPS CENTER DASHBOARD  |
-                                     |   (Visualization & UI)   |
-                                     +--------------------------+
+```mermaid
+flowchart LR
+    %% CLOUD LAYER
+    subgraph CLOUD_LAYER [CLOUD LAYER]
+        GEMINI[Google Gemini\n(Attacker)]
+    end
+
+    %% LOCAL CLIENT LAYER
+    subgraph LOCAL_LAYER [LOCAL CLIENT LAYER]
+        THC[Threat Hunter Console\n(Input / Simulation)]
+        TFJS[TensorFlow.js Engine\n(The Neural Defender)]
+        OPS[OPS CENTER DASHBOARD\n(Visualization & UI)]
+    end
+
+    GEMINI -- JSON Log --> THC
+    THC --> TFJS
+    TFJS -->|Vector Analysis| OPS
+
 ```
 
 1.  **The Attacker (Red Team):** Uses **Google Gemini 2.5** (or a local procedural engine) to "hallucinate" sophisticated, realistic cyber-attack logs based on specific vectors.
