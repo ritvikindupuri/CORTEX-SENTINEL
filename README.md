@@ -2,6 +2,8 @@
 ## Neural Defense Grid (Hybrid Architecture)
 
 **Author:** Ritvik Indupuri
+**Version:** 2.1.0
+**Status:** Active // Production Ready
 
 ---
 
@@ -11,53 +13,45 @@
 
 As AI agents become more autonomous (utilizing tools via the **Model Context Protocol**), traditional regex-based firewalls fail to detect semantic threats like persona masquerading or context-window overflow attacks. Cortex Sentinel solves this by deploying a **Local Neural Network** directly in the browser to analyze telemetry in real-time.
 
-
+🔗 **[VIEW FULL ENGINEERING WHITEPAPER](./TECHNICAL_DOCS.md)**
 
 ---
+
 ### 2. High-Level Architecture
 
-The system uses a Bicameral (Two-Brain) Architecture, where the Cloud Brain generates attack telemetry and the Local Brain analyzes it without sending any private data off-device.
+The system employs a **Bicameral (Two-Brain) Architecture** that decouples threat generation (Cloud) from threat detection (Edge), ensuring zero-trust privacy for analysis.
 
-```mermaid
-flowchart LR
+<p align="center">
+  <img src="https://i.imgur.com/kp4COh6.png" alt="Cortex Sentinel Hybrid Architecture Diagram" width="700" />
+  <br>
+  <em>Figure 1: Cortex Sentinel Hybrid Data Flow (Cloud Generation → Local Neural Analysis)</em>
+</p>
 
-subgraph CLOUD_LAYER [CLOUD LAYER]
-    GEMINI[Google Gemini (Attacker)]
-end
+**Architecture Breakdown:**
 
-subgraph LOCAL_LAYER [LOCAL CLIENT LAYER]
-    THC[Threat Hunter Console (Input / Simulation)]
-    TFJS[TensorFlow.js Engine (The Neural Defender)]
-    OPS[OPS CENTER DASHBOARD (Visualization & UI)]
-end
+1.  **Cloud Layer (The Attacker):**
+    *   **Google Gemini 2.5 Flash** acts as the "Red Team."
+    *   It generates high-fidelity, context-aware **JSON Attack Logs** simulating advanced tradecraft (RedScan Protocol, Context Overflows) based on specific prompts.
 
-GEMINI -->|JSON Log| THC
-THC --> TFJS
-TFJS -->|Vector Analysis| OPS
-```
-
-
-1. **The Attacker (Red Team):**
-   Google Gemini 2.5 (or a procedural fallback engine) generates realistic, high-fidelity cyberattack logs. These emulate credential abuse, prompt injection, agentic misuse patterns, and adversarial behaviors.
-
-2. **The Defender (Blue Team):**
-   A local TensorFlow.js model converts each incoming log into a 512-dimensional embedding and compares it against known threat-anchor vectors. This enables client-side, zero-trust, zero-latency detection with no cloud-bound data.
-
+2.  **Local Client Layer (The Defender):**
+    *   **Threat Hunter Console:** The interface where operators inject logs or trigger simulations.
+    *   **TensorFlow.js Engine:** The core defense logic. It runs the **Universal Sentence Encoder** entirely in the browser's WebGL backend. It converts incoming logs into 512-dimensional vectors and performs matrix multiplication against known threat anchors.
+    *   **Ops Center:** Visualizes the output (Threat Scores, System Load) in real-time.
 
 ---
 
 ### 3. Core Capabilities
 
-####  Neural Heuristics Engine
+#### 🛡️ Neural Heuristics Engine
 Instead of sending sensitive logs to the cloud, Cortex Sentinel loads the **Universal Sentence Encoder** model directly into the browser's GPU. It measures the semantic distance between incoming logs and known threat anchors.
 *   **Zero-Shot Learning:** Detects novel threats based on conceptual similarity rather than exact keyword matches.
 
-####  Procedural Telemetry Generator
+#### ⚔️ Procedural Telemetry Generator
 A dual-mode engine that constructs realistic cyber-attack logs for training and testing.
 *   **Cloud Mode:** Uses Gemini API to generate context-aware Red Team logs.
 *   **Local Mode:** Uses algorithmic templates for offline simulation.
 
-####  MCP Guardrails
+#### 🚧 MCP Guardrails
 Specific detectors for **Model Context Protocol** violations:
 *   **Velocity:** Detects inhuman tool execution speeds (>3 ops/sec).
 *   **Protocol:** Flags missing authentication signatures in agent handshakes.
