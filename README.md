@@ -1,23 +1,73 @@
 # CORTEX SENTINEL
-## Neural Defense Grid (Offline Architecture)
+## Neural Defense Grid (Hybrid Architecture)
 
 **Author:** Ritvik Indupuri
-**Version:** 2.1.0-Hybrid
-**Architecture:** Hybrid (Google Gemini Generator + TFJS Defender)
+**Version:** 2.1.0
+**Status:** Active // Production Ready
 
 ---
 
 ### 1. Executive Summary
 
-Cortex Sentinel is a browser-based cybersecurity platform designed to detect **"Agentic Breakout"** threats. It addresses the specific vulnerabilities outlined in recent Agentic AI security reports, such as rapid-fire tool execution and protocol masquerading.
+**Cortex Sentinel** is a browser-based cybersecurity platform designed to detect and neutralize **"Agentic Breakouts"**.
 
-The system employs a **Hybrid Architecture**:
-1.  **Offense:** Uses **Google Gemini 2.5** (or a local procedural engine) to simulate sophisticated AI attacks.
-2.  **Defense:** Uses a local **TensorFlow.js** Neural Network to detect those attacks in real-time via vector space analysis, ensuring zero data egress for the defense layer.
+As AI agents become more autonomous (utilizing tools via the **Model Context Protocol**), traditional regex-based firewalls fail to detect semantic threats like persona masquerading or context-window overflow attacks. Cortex Sentinel solves this by deploying a **Local Neural Network** directly in the browser to analyze telemetry in real-time.
+
+🔗 **[VIEW FULL ENGINEERING WHITEPAPER](./TECHNICAL_DOCS.md)**
 
 ---
 
-### 2. Technology Stack
+### 2. High-Level Architecture
+
+The system employs a **Bicameral (Two-Brain) Architecture** to simulate and detect threats without privacy compromise.
+
+```text
+[ CLOUD LAYER ]                      [ LOCAL CLIENT LAYER ]
++-----------------+                  +--------------------------+
+|  Google Gemini  | --(JSON Log)-->  |   Threat Hunter Console  |
+|   (Attacker)    |                  |    (Input / Simulation)  |
++-----------------+                  +------------+-------------+
+                                                  |
+                                                  v
+                                     +------------+-------------+
+                                     |   TensorFlow.js Engine   |
+                                     |   (The Neural Defender)  |
+                                     +------------+-------------+
+                                                  |
+                                         (Vector Analysis)
+                                                  |
+                                                  v
+                                     +--------------------------+
+                                     |    OPS CENTER DASHBOARD  |
+                                     |   (Visualization & UI)   |
+                                     +--------------------------+
+```
+
+1.  **The Attacker (Red Team):** Uses **Google Gemini 2.5** (or a local procedural engine) to "hallucinate" sophisticated, realistic cyber-attack logs based on specific vectors.
+2.  **The Defender (Blue Team):** Uses **TensorFlow.js** (WebGL) to convert those logs into 512-dimensional vectors and classify them against known threat concepts.
+
+---
+
+### 3. Core Capabilities
+
+#### 🛡️ Neural Heuristics Engine
+Instead of sending sensitive logs to the cloud, Cortex Sentinel loads the **Universal Sentence Encoder** model directly into the browser's GPU. It measures the semantic distance between incoming logs and known threat anchors.
+*   **Zero-Shot Learning:** Detects novel threats based on conceptual similarity rather than exact keyword matches.
+
+#### ⚔️ Procedural Telemetry Generator
+A dual-mode engine that constructs realistic cyber-attack logs for training and testing.
+*   **Cloud Mode:** Uses Gemini API to generate context-aware Red Team logs.
+*   **Local Mode:** Uses algorithmic templates for offline simulation.
+
+#### 🚧 MCP Guardrails
+Specific detectors for **Model Context Protocol** violations:
+*   **Velocity:** Detects inhuman tool execution speeds (>3 ops/sec).
+*   **Protocol:** Flags missing authentication signatures in agent handshakes.
+*   **Context:** Identifies payload truncation attempts designed to hide malicious code.
+
+---
+
+### 4. Technology Stack
 
 *   **Frontend Framework:** React 19 (TypeScript)
 *   **Defense Engine:** TensorFlow.js (WebGL) + Universal Sentence Encoder
@@ -28,26 +78,7 @@ The system employs a **Hybrid Architecture**:
 
 ---
 
-### 3. Core Capabilities
-
-#### A. Neural Heuristics Engine (The Defender)
-Instead of sending sensitive logs to the cloud, Cortex Sentinel loads a **512-dimensional vector embedding model** directly into the browser's GPU. It measures the semantic distance between incoming logs and known threat concepts (e.g., "SQL Injection", "Root Escalation").
-*   **Zero-Shot Learning:** Uses Semantic Anchor Injection to classify new threats without model retraining.
-
-#### B. Procedural Telemetry Generator (The Attacker)
-A dual-mode engine that constructs realistic cyber-attack logs.
-*   **Cloud Mode:** Uses Gemini to hallucinate creative, context-aware Red Team logs.
-*   **Local Mode:** Uses algorithmic templates to generate high-entropy logs offline.
-
-#### C. MCP Guardrails
-Specific detectors for **Model Context Protocol** violations:
-*   **Velocity:** Detects inhuman tool execution speeds (>3 ops/sec).
-*   **Protocol:** Flags missing authentication signatures in agent handshakes.
-*   **Context:** Identifies payload truncation attempts designed to hide malicious code.
-
----
-
-### 4. Installation & Setup
+### 5. Installation & Setup
 
 **Prerequisites:**
 - Node.js (v18 or higher)
@@ -74,7 +105,7 @@ The application will launch at `http://localhost:3000`.
 
 ---
 
-### 5. Operational Guide
+### 6. Usage Guide
 
 #### Phase 1: Threat Hunting (Simulation)
 1.  Navigate to **Threat Hunter**.
@@ -87,13 +118,13 @@ The application will launch at `http://localhost:3000`.
 2.  The local TensorFlow model computes the vector embeddings.
 3.  A verdict (THREAT/CLEAN) is returned in <100ms.
 
-#### Phase 3: Compliance
+#### Phase 3: Compliance & Auditing
 1.  Navigate to **Raw Telemetry**.
 2.  Review the immutable audit trail.
 3.  Click **EXPORT COMPLIANCE REPORT** to download a CSV for external auditing.
 
 ---
 
-### 6. Disclaimer
+### 7. Disclaimer
 
 This tool uses client-side machine learning for educational and research purposes. While the Universal Sentence Encoder is powerful, production security systems should rely on multi-layered defense strategies involving network-level firewalls and SIEM integration.
