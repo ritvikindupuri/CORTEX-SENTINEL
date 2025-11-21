@@ -165,7 +165,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey }) => {
                }`}
              >
                {isLoading ? <Loader2 className="animate-spin" size={14} /> : <Search size={14} />}
-               Analyze Telemetry (TFJS)
+               Analyze Telemetry
              </button>
           </div>
         </div>
