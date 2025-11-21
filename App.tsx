@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History, Download, FileCheck } from 'lucide-react';
+import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History, Download, FileCheck, Trash2 } from 'lucide-react';
 import { LogEntry, ThreatAnalysis, ThreatLevel, SavedSession } from './types';
 import { initializeNeuralEngine } from './services/gemini';
 
@@ -86,8 +86,13 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handlePurge = () => {
-    setLogs([]);
+  const handleClearHistory = () => {
+    if (window.confirm("FACTORY RESET: This will wipe all active logs and archived session history. This action cannot be undone. Proceed?")) {
+      setLogs([]);
+      setUserSessions([]);
+      localStorage.removeItem('cortex_user_sessions');
+      setActiveTab('dashboard');
+    }
   };
 
   const handleSaveCurrentSession = () => {
@@ -384,10 +389,10 @@ const App: React.FC = () => {
                            <Save size={14} /> Save Current Run
                         </button>
                         <button 
-                          onClick={handlePurge}
-                          className="bg-red-950/10 border border-red-900/30 hover:bg-red-950/30 hover:border-red-500/50 p-3 text-xs font-mono text-red-400 hover:text-red-300 transition-colors text-center"
+                          onClick={handleClearHistory}
+                          className="bg-red-950/10 border border-red-900/30 hover:bg-red-950/30 hover:border-red-500/50 p-3 text-xs font-mono text-red-400 hover:text-red-300 transition-colors text-center flex items-center justify-center gap-2"
                         >
-                            Purge System Logs
+                            <Trash2 size={14} /> Clear Session History
                         </button>
                     </div>
                  </div>
