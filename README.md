@@ -2,8 +2,6 @@
 ## Neural Defense Grid (Hybrid Architecture)
 
 **Author:** Ritvik Indupuri
-**Version:** 2.1.0
-**Status:** Active // Production Ready
 
 ---
 
