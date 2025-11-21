@@ -13,7 +13,7 @@
 
 As AI agents become more autonomous (utilizing tools via the **Model Context Protocol**), traditional regex-based firewalls fail to detect semantic threats like persona masquerading or context-window overflow attacks. Cortex Sentinel solves this by deploying a **Local Neural Network** directly in the browser to analyze telemetry in real-time.
 
-🔗 **[VIEW FULL ENGINEERING WHITEPAPER](./TECHNICAL_DOCS.md)**
+
 
 ---
 
