@@ -23,41 +23,8 @@ The application follows a unidirectional data flow pattern, ensuring state consi
 
 ### 2.1 Architecture Diagram
 
-```text
-[ USER ] interacts with UI
-   |
-   v
-[ THREAT HUNTER COMPONENT ]
-   |
-   +--- (A) GENERATION PATHWAY (The Attacker) -----------+
-   |    1. User Click "Generate Log"                     |
-   |    2. Check for API Key                             |
-   |       |-- YES: Call Gemini 2.5 Flash (The Brain)    |
-   |       |-- NO:  Call Procedural Script (Fallback)    |
-   |    3. Output: Realistic JSON Log Entry              |
-   +-----------------------------------------------------+
-   |
-   v
-[ INPUT BUFFER (Terminal UI) ]
-   |
-   +--- (B) ANALYSIS PATHWAY (The Defender) -------------+
-   |    1. User Clicks "Analyze Telemetry"               |
-   |    2. Input String -> NeuralService                 |
-   |    3. TENSORFLOW.JS (WebGL Backend)                 |
-   |       |-- Input -> Universal Sentence Encoder       |
-   |       |-- Output -> 512-Dim Vector Embedding        |
-   |       |-- Math -> Dot Product vs. Threat Anchors    |
-   |    4. Heuristic Checks (Regex/Pattern)              |
-   |    5. Output: ThreatAnalysis Object                 |
-   +-----------------------------------------------------+
-   |
-   v
-[ APP STATE (React Context) ]
-   |
-   +--- Updates OPS CENTER (Dashboard Metrics)
-   +--- Appends to RAW TELEMETRY (Audit Log)
-   +--- Serialized to SESSION STORAGE (History)
-```
+![Cortex Sentinel Hybrid Architecture Diagram](https://imgur.com/49RtHYI)
+**Figure 1:** Cortex Sentinel Bicameral Architecture (Hybrid Cloud/Local Data Flow) - Illustrating the separation between the Generation Pathway (Attacker) and Analysis Pathway (Defender).
 
 ---
 
