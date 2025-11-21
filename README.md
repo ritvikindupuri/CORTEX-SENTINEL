@@ -36,6 +36,7 @@ THC --> TFJS
 TFJS -->|Vector Analysis| OPS
 ```
 
+
 1. **The Attacker (Red Team):**
    Google Gemini 2.5 (or a procedural fallback engine) generates realistic, high-fidelity cyberattack logs. These emulate credential abuse, prompt injection, agentic misuse patterns, and adversarial behaviors.
 
