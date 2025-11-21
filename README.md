@@ -47,16 +47,16 @@ TFJS -->|Vector Analysis| OPS
 
 ### 3. Core Capabilities
 
-#### 🛡️ Neural Heuristics Engine
+####  Neural Heuristics Engine
 Instead of sending sensitive logs to the cloud, Cortex Sentinel loads the **Universal Sentence Encoder** model directly into the browser's GPU. It measures the semantic distance between incoming logs and known threat anchors.
 *   **Zero-Shot Learning:** Detects novel threats based on conceptual similarity rather than exact keyword matches.
 
-#### ⚔️ Procedural Telemetry Generator
+####  Procedural Telemetry Generator
 A dual-mode engine that constructs realistic cyber-attack logs for training and testing.
 *   **Cloud Mode:** Uses Gemini API to generate context-aware Red Team logs.
 *   **Local Mode:** Uses algorithmic templates for offline simulation.
 
-#### 🚧 MCP Guardrails
+####  MCP Guardrails
 Specific detectors for **Model Context Protocol** violations:
 *   **Velocity:** Detects inhuman tool execution speeds (>3 ops/sec).
 *   **Protocol:** Flags missing authentication signatures in agent handshakes.
