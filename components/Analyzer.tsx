@@ -6,9 +6,10 @@ import { ThreatAnalysis, AttackVector } from '../types';
 interface AnalyzerProps {
   onAnalysisComplete: (analysis: ThreatAnalysis) => void;
   apiKey: string;
+  clearTrigger: number;
 }
 
-const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey }) => {
+const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey, clearTrigger }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -23,6 +24,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAnalysisComplete, apiKey }) => {
         bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [input, result]);
+
+  // Watch for global clear signal
+  useEffect(() => {
+      if (clearTrigger > 0) {
+          setInput('');
+          setResult(null);
+      }
+  }, [clearTrigger]);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;

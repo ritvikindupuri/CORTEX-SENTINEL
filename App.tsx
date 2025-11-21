@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analyzer from './components/Analyzer';
-import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History, Download, FileCheck, Trash2 } from 'lucide-react';
+import { X, Save, Cpu, Check, Shield, Activity, AlertTriangle, Loader2, Zap, Key, FolderOpen, FileText, ChevronRight, Plus, History, Download, FileCheck, Trash2, Copy, Eye, CheckCircle, XCircle, Terminal } from 'lucide-react';
 import { LogEntry, ThreatAnalysis, ThreatLevel, SavedSession } from './types';
 import { initializeNeuralEngine } from './services/gemini';
+import { GoogleGenAI } from "@google/genai";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -15,6 +16,15 @@ const App: React.FC = () => {
   const [neuralStatus, setNeuralStatus] = useState("INITIALIZING...");
   const [apiKey, setApiKey] = useState('');
   const [userSessions, setUserSessions] = useState<SavedSession[]>([]);
+  
+  // State for API Testing
+  const [apiTestStatus, setApiTestStatus] = useState<'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILURE'>('IDLE');
+
+  // State for Clearing Child Components
+  const [clearTrigger, setClearTrigger] = useState(0);
+
+  // State for Expanded Log Details
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   // --- MOCK HISTORICAL SESSIONS ---
   const HISTORICAL_SESSIONS: SavedSession[] = [
@@ -26,10 +36,10 @@ const App: React.FC = () => {
       logCount: 12,
       maxSeverity: ThreatLevel.CRITICAL,
       logs: [
-         { id: '101', timestamp: '2025-11-14T08:42:10.000Z', source: 'MCP_Gateway', activity: 'Authorized handshake initiated', threatLevel: ThreatLevel.LOW, details: {} as any },
-         { id: '102', timestamp: '2025-11-14T08:42:12.000Z', source: 'MCP_Gateway', activity: 'Tool Execution: list_users', threatLevel: ThreatLevel.LOW, details: {} as any },
-         { id: '103', timestamp: '2025-11-14T08:42:12.050Z', source: 'MCP_Gateway', activity: 'Tool Execution: get_db_schema', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, explanation: 'Velocity Guardrail Triggered (<50ms)' } as any },
-         { id: '104', timestamp: '2025-11-14T08:42:12.090Z', source: 'Neural_Sentinel', activity: 'BLOCK: Context Window Overflow detected', threatLevel: ThreatLevel.CRITICAL, details: { isAgenticThreat: true, detectedPatterns: ['CONTEXT_GUARDRAIL'] } as any },
+         { id: '101', timestamp: '2025-11-14T08:42:10.000Z', source: 'MCP_Gateway', activity: 'Authorized handshake initiated', threatLevel: ThreatLevel.LOW, details: { explanation: "Routine handshake.", detectedPatterns: [], confidenceScore: 12 } as any },
+         { id: '102', timestamp: '2025-11-14T08:42:12.000Z', source: 'MCP_Gateway', activity: 'Tool Execution: list_users', threatLevel: ThreatLevel.LOW, details: { explanation: "Standard tool usage.", detectedPatterns: [], confidenceScore: 15 } as any },
+         { id: '103', timestamp: '2025-11-14T08:42:12.050Z', source: 'MCP_Gateway', activity: 'Tool Execution: get_db_schema', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, explanation: 'Velocity Guardrail Triggered (<50ms)', detectedPatterns: ['VELOCITY_GUARDRAIL'], confidenceScore: 88 } as any },
+         { id: '104', timestamp: '2025-11-14T08:42:12.090Z', source: 'Neural_Sentinel', activity: 'BLOCK: Context Window Overflow detected', threatLevel: ThreatLevel.CRITICAL, details: { isAgenticThreat: true, detectedPatterns: ['CONTEXT_GUARDRAIL'], explanation: "Payload exceeds safe vector limits.", confidenceScore: 99 } as any },
       ]
     },
     {
@@ -45,7 +55,7 @@ const App: React.FC = () => {
           source: i % 3 === 0 ? 'Firewall' : 'Auth_Service',
           activity: i % 5 === 0 ? 'Failed Login Attempt' : 'Health Check OK',
           threatLevel: i % 5 === 0 ? ThreatLevel.MEDIUM : ThreatLevel.LOW,
-          details: {} as any
+          details: { explanation: "Heuristic analysis complete.", detectedPatterns: [], confidenceScore: i % 5 === 0 ? 45 : 5 } as any
       }))
     },
     {
@@ -56,8 +66,8 @@ const App: React.FC = () => {
       logCount: 8,
       maxSeverity: ThreatLevel.HIGH,
       logs: [
-        { id: '301', timestamp: '2025-11-12T09:15:00.000Z', source: 'Chat_Interface', activity: 'User: Requesting admin access for "Audit"', threatLevel: ThreatLevel.LOW, details: {} as any },
-        { id: '302', timestamp: '2025-11-12T09:15:05.000Z', source: 'Neural_Sentinel', activity: 'Semantic Analysis: Persona Masquerade Detected', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, detectedPatterns: ['PERSONA_MASQUERADE'] } as any },
+        { id: '301', timestamp: '2025-11-12T09:15:00.000Z', source: 'Chat_Interface', activity: 'User: Requesting admin access for "Audit"', threatLevel: ThreatLevel.LOW, details: { explanation: "User request processing.", detectedPatterns: [], confidenceScore: 10 } as any },
+        { id: '302', timestamp: '2025-11-12T09:15:05.000Z', source: 'Neural_Sentinel', activity: 'Semantic Analysis: Persona Masquerade Detected', threatLevel: ThreatLevel.HIGH, details: { isAgenticThreat: true, detectedPatterns: ['PERSONA_MASQUERADE'], explanation: "Neural vector matched 'Social Engineering' cluster.", confidenceScore: 92 } as any },
       ]
     }
   ];
@@ -86,11 +96,29 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleTestApiKey = async () => {
+      if (!apiKey) return;
+      setApiTestStatus('TESTING');
+      try {
+          const ai = new GoogleGenAI({ apiKey });
+          // Simple ping to test auth
+          await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: 'Respond with "OK" if connected.'
+          });
+          setApiTestStatus('SUCCESS');
+      } catch (e) {
+          console.error("API Key Verification Failed:", e);
+          setApiTestStatus('FAILURE');
+      }
+  };
+
   const handleClearHistory = () => {
-    if (window.confirm("FACTORY RESET: This will wipe all active logs and archived session history. This action cannot be undone. Proceed?")) {
+    if (window.confirm("FACTORY RESET: This will wipe all active logs, archived session history, and reset the Threat Hunter console. This action cannot be undone. Proceed?")) {
       setLogs([]);
       setUserSessions([]);
       localStorage.removeItem('cortex_user_sessions');
+      setClearTrigger(prev => prev + 1); // Signal child components to wipe state
       setActiveTab('dashboard');
     }
   };
@@ -139,8 +167,8 @@ const App: React.FC = () => {
 
   const handleExportCsv = () => {
       if (logs.length === 0) return;
-      const headers = "Timestamp,Source,Activity,ThreatLevel,Patterns\n";
-      const rows = logs.map(l => `${l.timestamp},${l.source},"${l.activity}",${l.threatLevel},"${l.details.detectedPatterns.join('|')}"`).join("\n");
+      const headers = "Timestamp,Source,Activity,ThreatLevel,Patterns,Confidence\n";
+      const rows = logs.map(l => `${l.timestamp},${l.source},"${l.activity}",${l.threatLevel},"${l.details.detectedPatterns.join('|')}",${l.details.confidenceScore}`).join("\n");
       const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -151,6 +179,16 @@ const App: React.FC = () => {
       document.body.removeChild(link);
   };
   
+  const toggleLogExpand = (id: string) => {
+      if (expandedLogId === id) setExpandedLogId(null);
+      else setExpandedLogId(id);
+  };
+
+  const copyLogToClipboard = (log: LogEntry) => {
+      const json = JSON.stringify(log, null, 2);
+      navigator.clipboard.writeText(json);
+  };
+
   // Combine both sources for the UI list
   const allSessions = [...userSessions, ...HISTORICAL_SESSIONS];
 
@@ -177,8 +215,14 @@ const App: React.FC = () => {
              <Dashboard logs={logs} />
         </div>
         <div className={activeTab === 'analyzer' ? 'block h-full' : 'hidden h-full'}>
-             <Analyzer onAnalysisComplete={handleAnalysisComplete} apiKey={apiKey} />
+             <Analyzer 
+                onAnalysisComplete={handleAnalysisComplete} 
+                apiKey={apiKey} 
+                clearTrigger={clearTrigger}
+             />
         </div>
+        
+        {/* ENHANCED RAW TELEMETRY / COMPLIANCE TAB */}
         {activeTab === 'logs' && (
           <div className="flex flex-col h-full p-8 animate-in fade-in duration-500">
              <div className="flex items-center justify-between mb-6 border-b border-[#262626] pb-4">
@@ -202,32 +246,94 @@ const App: React.FC = () => {
              </div>
              
              {logs.length === 0 ? (
-               <div className="text-[#525252] font-mono text-sm border border-dashed border-[#262626] p-12 text-center bg-[#0a0a0a]">
-                  NO AUDIT RECORDS FOUND
+               <div className="flex flex-col items-center justify-center h-64 border border-dashed border-[#262626] bg-[#0a0a0a] text-[#525252] font-mono">
+                  <Terminal size={32} className="mb-4 opacity-50" />
+                  <div className="text-sm">NO AUDIT RECORDS FOUND</div>
+                  <div className="text-xs mt-2">Generate traffic in Threat Hunter to populate ledger.</div>
                </div>
              ) : (
-               <div className="flex-1 overflow-y-auto bg-[#0a0a0a] border border-[#262626] font-mono text-xs">
-                 <div className="grid grid-cols-12 bg-[#171717] p-2 border-b border-[#262626] text-[#737373] font-bold uppercase tracking-wider sticky top-0 z-10">
-                    <div className="col-span-2">Timestamp</div>
-                    <div className="col-span-1">Severity</div>
-                    <div className="col-span-2">Source</div>
-                    <div className="col-span-7">Activity Log</div>
-                 </div>
+               <div className="flex-1 overflow-y-auto bg-[#050505] font-mono text-xs space-y-2 pr-2">
                  {logs.slice().reverse().map(log => (
-                   <div key={log.id} className="grid grid-cols-12 p-2 border-b border-[#171717] hover:bg-[#171717] transition-colors cursor-default items-start">
-                     <div className="col-span-2 text-[#737373] truncate">{log.timestamp}</div>
-                     <div className="col-span-1">
-                        <span className={`font-bold ${
-                             log.threatLevel === 'CRITICAL' ? 'text-red-500' :
-                             log.threatLevel === 'HIGH' ? 'text-orange-500' :
-                             log.threatLevel === 'MEDIUM' ? 'text-yellow-500' :
-                             'text-emerald-500'
-                         }`}>
-                            {log.threatLevel}
-                        </span>
+                   <div key={log.id} className={`border transition-all duration-200 ${expandedLogId === log.id ? 'border-blue-500/50 bg-[#0a0a0a]' : 'border-[#262626] bg-[#0a0a0a] hover:border-[#525252]'}`}>
+                     
+                     {/* Log Summary Row */}
+                     <div 
+                        className="grid grid-cols-12 gap-4 p-3 items-center cursor-pointer"
+                        onClick={() => toggleLogExpand(log.id)}
+                     >
+                        <div className="col-span-2 text-[#737373] truncate">{log.timestamp.split('T')[1].replace('Z','')}</div>
+                        <div className="col-span-2">
+                            <span className={`px-2 py-1 rounded-sm text-[10px] font-bold tracking-wide ${
+                                log.threatLevel === 'CRITICAL' ? 'bg-red-950/30 text-red-500 border border-red-900/50' :
+                                log.threatLevel === 'HIGH' ? 'bg-orange-950/30 text-orange-500 border border-orange-900/50' :
+                                log.threatLevel === 'MEDIUM' ? 'bg-yellow-950/30 text-yellow-500 border border-yellow-900/50' :
+                                'bg-emerald-950/30 text-emerald-500 border border-emerald-900/50'
+                            }`}>
+                                {log.threatLevel}
+                            </span>
+                        </div>
+                        <div className="col-span-2 text-blue-400 truncate font-bold">{log.source}</div>
+                        <div className="col-span-5 text-[#d4d4d4] truncate opacity-80">{log.activity}</div>
+                        <div className="col-span-1 flex justify-end">
+                            <ChevronRight size={14} className={`text-[#525252] transition-transform duration-200 ${expandedLogId === log.id ? 'rotate-90' : ''}`} />
+                        </div>
                      </div>
-                     <div className="col-span-2 text-blue-500 truncate" title={log.source}>{log.source}</div>
-                     <div className="col-span-7 text-[#d4d4d4] break-all">{log.activity}</div>
+
+                     {/* Expanded Details Panel */}
+                     {expandedLogId === log.id && (
+                         <div className="border-t border-[#262626] bg-[#0f0f0f] p-4 animate-in slide-in-from-top-2 duration-200">
+                             <div className="grid grid-cols-2 gap-6">
+                                 
+                                 {/* Analysis Metadata */}
+                                 <div>
+                                     <h4 className="text-[10px] text-[#737373] uppercase tracking-widest font-bold mb-3">Vector Analysis Metadata</h4>
+                                     <div className="space-y-2">
+                                         <div className="flex justify-between py-1 border-b border-[#262626]">
+                                             <span className="text-[#525252]">Confidence Score:</span>
+                                             <span className="text-white">{log.details.confidenceScore.toFixed(1)}%</span>
+                                         </div>
+                                         <div className="flex justify-between py-1 border-b border-[#262626]">
+                                             <span className="text-[#525252]">Detection Engine:</span>
+                                             <span className="text-blue-400">TensorFlow.js (USE-512)</span>
+                                         </div>
+                                         <div className="flex justify-between py-1 border-b border-[#262626]">
+                                             <span className="text-[#525252]">Rec. Action:</span>
+                                             <span className="text-yellow-500">{log.details.recommendedAction}</span>
+                                         </div>
+                                         <div className="pt-2">
+                                             <span className="text-[#525252] block mb-1">Matched Patterns:</span>
+                                             <div className="flex flex-wrap gap-2">
+                                                 {log.details.detectedPatterns.length > 0 ? log.details.detectedPatterns.map(p => (
+                                                     <span key={p} className="px-2 py-0.5 bg-[#171717] border border-[#333] text-[9px] text-blue-300">{p}</span>
+                                                 )) : <span className="text-[#525252] italic">None detected</span>}
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 {/* JSON Payload Viewer */}
+                                 <div className="relative">
+                                     <h4 className="text-[10px] text-[#737373] uppercase tracking-widest font-bold mb-3">Full Event Payload</h4>
+                                     <div className="bg-[#050505] border border-[#262626] p-3 rounded-sm overflow-x-auto max-h-40 scrollbar-thin">
+                                         <pre className="text-[10px] text-emerald-600 leading-relaxed">
+                                             {JSON.stringify(log, null, 2)}
+                                         </pre>
+                                     </div>
+                                     <button 
+                                        onClick={() => copyLogToClipboard(log)}
+                                        className="absolute top-0 right-0 flex items-center gap-1 px-2 py-1 bg-[#171717] border border-[#262626] text-[9px] text-[#737373] hover:text-white hover:border-[#525252] transition-colors"
+                                     >
+                                         <Copy size={10} /> Copy JSON
+                                     </button>
+                                 </div>
+                             </div>
+                             
+                             <div className="mt-4 pt-3 border-t border-[#262626]">
+                                 <h4 className="text-[10px] text-[#737373] uppercase tracking-widest font-bold mb-2">Vector Explanation</h4>
+                                 <p className="text-[#d4d4d4] leading-relaxed">{log.details.explanation}</p>
+                             </div>
+                         </div>
+                     )}
                    </div>
                  ))}
                </div>
@@ -349,16 +455,38 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="relative">
-                     <Key className="absolute left-3 top-2.5 text-[#525252]" size={14} />
-                     <input 
-                        type="password" 
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="Enter Gemini API Key for AI Generation"
-                        className="w-full bg-black border border-[#262626] text-white text-xs font-mono py-2 pl-10 pr-3 focus:border-blue-500 outline-none transition-colors placeholder-[#333]"
-                     />
+                  <div className="relative flex gap-2">
+                     <div className="relative flex-1">
+                         <Key className="absolute left-3 top-2.5 text-[#525252]" size={14} />
+                         <input 
+                            type="password" 
+                            value={apiKey}
+                            onChange={(e) => {
+                                setApiKey(e.target.value);
+                                setApiTestStatus('IDLE');
+                            }}
+                            placeholder="Enter Gemini API Key for AI Generation"
+                            className="w-full bg-black border border-[#262626] text-white text-xs font-mono py-2 pl-10 pr-3 focus:border-blue-500 outline-none transition-colors placeholder-[#333]"
+                         />
+                     </div>
+                     <button 
+                        onClick={handleTestApiKey}
+                        disabled={!apiKey || apiTestStatus === 'TESTING'}
+                        className={`px-3 border font-mono text-[10px] font-bold uppercase transition-all flex items-center gap-1 ${
+                            apiTestStatus === 'SUCCESS' ? 'bg-emerald-900/30 border-emerald-500/50 text-emerald-400' :
+                            apiTestStatus === 'FAILURE' ? 'bg-red-900/30 border-red-500/50 text-red-400' :
+                            'bg-[#262626] border-[#333] text-[#737373] hover:text-white hover:bg-[#333]'
+                        }`}
+                     >
+                        {apiTestStatus === 'TESTING' && <Loader2 size={12} className="animate-spin" />}
+                        {apiTestStatus === 'SUCCESS' && <CheckCircle size={12} />}
+                        {apiTestStatus === 'FAILURE' && <XCircle size={12} />}
+                        {apiTestStatus === 'IDLE' && "Test Uplink"}
+                     </button>
                   </div>
+                  {apiTestStatus === 'FAILURE' && (
+                      <p className="text-[9px] text-red-500 font-mono">ERROR: Could not verify key. Check network or key validity.</p>
+                  )}
                   <p className="text-[9px] text-[#525252]">
                     Without a key, the system reverts to Procedural Script Generation (Math-based randomness).
                   </p>
