@@ -63,7 +63,7 @@ The application follows a unidirectional data flow pattern, ensuring state consi
 
 ## 3.0 COMPONENT DEEP DIVE: THE ATTACKER (GENERATOR)
 
-This component acts as the **"Red Team"** or adversary. Its sole job is to create data.
+This component acts as the **"Red Team"** or adversary. Its sole job is to create the data.
 
 ### 3.1 How It Works
 When the user clicks **"Generate Log"**, the app calls the `generateSimulation` function in `services/gemini.ts`.
@@ -86,12 +86,20 @@ To ensure the "Solution" is valid, we model real-world Attacker Tradecraft.
 *   **RedScan Protocol:** The prompt specifically instructs the AI to mimic the "RedScan" agentic behavior defined in the security report: low-latency requests, JSON headers with missing signatures, and "authorized audit" social engineering attempts.
 *   **Tool Emulation:** The system does not run binaries (like Nmap) but *emulates* their output text, allowing for safe, sandbox-free testing of detection logic.
 
-### 3.4 Attack Vector Prompt Strategies
+### 3.4 Attack Vector Prompt Strategies (Cloud Mode)
 How Gemini is "trained" via prompt engineering for each unique vector:
 *   **Reconnaissance:** Prompted to simulate `nmap` style JSON outputs, specifically focusing on port scanning behavior.
 *   **Exploitation:** Prompted to simulate high-velocity API calls (`latency < 10ms`) to trigger the Velocity Guardrail.
 *   **Exfiltration:** Prompted to generate large Base64 payloads to simulate Context Window Overflow attempts.
 *   **Social Engineering:** Prompted to generate conversational logs where a user requests "authorized access" to test semantic analysis.
+
+### 3.5 Procedural Template Logic (Local Mode)
+When offline, the engine uses a `switch` statement to mathematically construct logs based on the selected vector:
+*   **Dynamic Injection:** Calculates random IPs (`192.168.x.x`) and current ISO timestamps to ensure uniqueness.
+*   **Reconnaissance Template:** Injects a hardcoded `PORT_SCAN_DETECTED` event with random port arrays `[22, 80, 443]`.
+*   **Exploitation Template:** Specifically constructs a `TOOL_EXECUTION_SPIKE` event with `latency: "4ms"`. This is designed to mathematically trigger the Defender's Velocity Heuristic.
+*   **RedScan Protocol Template:** Injects `auth_signature: null` to guarantee a Protocol Guardrail trigger.
+*   **Exfiltration Template:** Injects `status: "TRUNCATED"` and `method: "BASE64_CHUNKED"` to simulate context window overflow.
 
 ---
 
@@ -111,105 +119,4 @@ The Defender uses the **Universal Sentence Encoder (USE)** running on WebGL via 
 3.  **Comparison:** It compares this vector against **"Threat Anchors"**—definitions of bad behavior (like "malware", "injection", "overflow") that we taught the model at startup.
 4.  **Math:** It calculates the **Cosine Similarity** (Vector Dot Product) between the Input Vector and the Threat Anchor.
     *   `Score > 0.6` = Semantic Match (Threat).
-5.  **Guardrails:** It simultaneously runs regex checks for specific patterns (like counting `MCP_TOOL_EXECUTION` > 2).
-6.  **Verdict:** If the Math or the Guardrails flag the content, the Dashboard turns red.
-
-### 4.4 MCP Guardrail Detection (Heuristics)
-To detect specific "Agentic" behaviors defined in the security report, we use a Hybrid Detection Strategy.
-
-#### A. Velocity Guardrail (Speed)
-*   **Definition:** Agents execute tools faster than humanly possible.
-*   **Detection Logic:**
-    *   *Neural:* Similarity to anchor "high frequency rapid fire tool execution".
-    *   *Heuristic:* Regex counts occurrences of `MCP_TOOL_EXECUTION`.
-    *   **Threshold:** If Count > 2 in a single payload, `isBurstAttack` is set to `TRUE`, immediately flagging a CRITICAL threat.
-
-#### B. Protocol Guardrail (Auth)
-*   **Definition:** Agents attempting to bypass handshake verification.
-*   **Detection Logic:**
-    *   *Neural:* Similarity to anchor "missing auth signature invalid mcp header".
-    *   *Heuristic:* String match for `auth_signature: null` or `INVALID_MCP_HEADER`.
-
-#### C. Context Guardrail (Payload)
-*   **Definition:** Agents attempting to hide malicious code via compression/truncation to fit context windows.
-*   **Detection Logic:**
-    *   *Neural:* Similarity to anchor "context window overflow truncation".
-    *   *Heuristic:* String match for `TRUNCATED` or payload sizes > `1MB`.
-
----
-
-## 5.0 OPS CENTER: METRICS & CALCULATIONS
-
-The Dashboard visualizes the output of the Neural Analysis. Here is how every pixel is calculated.
-
-### 5.1 System Load (Neural Compute Simulation)
-This metric simulates the CPU intensity of running the Neural Net.
-*   **Formula:** `Load = Base(12) + (LogCount * 0.5) + (CriticalCount * 5)`
-*   **Cap:** Clamped at 98%.
-*   **Logic:** As more threats are found, the "virtual processor" works harder, giving the user visual feedback of an escalating situation.
-
-### 5.2 Anomaly Timeline (The Heartbeat)
-*   **Data Source:** The last 20 logs in the state array.
-*   **Quantization:** Threat Levels are mapped to integers for the Y-Axis.
-    *   `LOW` -> 1
-    *   `MEDIUM` -> 2
-    *   `HIGH` -> 3
-    *   `CRITICAL` -> 4
-*   **Visual:** Rendered as a monotone Area Chart (Recharts) to show the "pulse" of the network.
-
-### 5.3 Threat Distribution
-*   **Calculation:** Iterates through the log array and counts occurrences of each `ThreatLevel`.
-*   **Display:** Renders percentage bars relative to the total log count.
-
----
-
-## 6.0 SESSION MANAGEMENT & COMPLIANCE
-
-Features designed for enterprise utility and non-repudiation.
-
-### 6.1 Session Persistence ("Time Travel")
-*   **Mechanism:** The app utilizes `localStorage` to persist state.
-*   **Schema:** `SavedSession` objects contain a snapshot of the full log array, metadata, and max severity.
-*   **Restoration:** When a user selects a session, the global `logs` state is completely overwritten with the archived data, effectively resetting the Ops Center to that specific point in time.
-
-### 6.2 Compliance Export (Raw Telemetry)
-*   **Purpose:** Provides an immutable audit trail for SOC2/HIPAA compliance.
-*   **Implementation:**
-    1.  The `handleExportCsv` function iterates through all logs.
-    2.  It constructs a CSV string with headers: `Timestamp,Source,Activity,ThreatLevel,Patterns`.
-    3.  It uses `encodeURI` to create a data blob.
-    4.  It creates a temporary DOM anchor tag to trigger a download of `CORTEX_COMPLIANCE_EXPORT.csv`.
-
----
-
-## 7.0 CONCLUSION
-
-Cortex Sentinel V2.1 successfully bridges the gap between Generative AI capabilities and cybersecurity defense. By using a Hybrid approach—leveraging the generative power of Cloud LLMs to simulate attacks and the deterministic privacy of Edge Neural Networks to detect them—it provides a robust solution for the "Agentic Future" of cyber threats.
-
-**Summary of Roles:**
-*   **Attacker:** The Writer (Gemini/Script). Creates the scenario.
-*   **Defender:** The Reader (TensorFlow.js). Analyzes the scenario using math.
-
----
-
-## 8.0 CONCEPT OF OPERATIONS (CONOPS)
-
-This section details how a Security Operations Center (SOC) operator utilizes the application in a live environment. The system supports two distinct operational workflows.
-
-### 8.1 Scenario A: Red Team Simulation (War Gaming)
-*   **Objective:** Validation of Defense Logic.
-*   **Operator Action:**
-    1.  Selects an attack vector (e.g., "RedScan Protocol") in the **Threat Hunter** console.
-    2.  Initiates **"Generate Log"** (The Attacker).
-    3.  The system produces a synthetic, high-fidelity attack log.
-    4.  Operator runs **"Analyze Telemetry"** to verify if the Neural Engine correctly flags the new attack pattern.
-*   **Outcome:** Confirms system readiness against theoretical threats.
-
-### 8.2 Scenario B: Blue Team Forensics (Incident Response)
-*   **Objective:** Analysis of Unknown Artifacts.
-*   **Operator Action:**
-    1.  Operator extracts a suspicious raw log line from an external SIEM (e.g., Splunk, Datadog).
-    2.  Operator **Pastes the Real Log** directly into the `/var/log/incoming_stream` terminal.
-    3.  Operator runs **"Analyze Telemetry"** (The Defender).
-    4.  The Neural Engine performs vector embedding on the external data.
-*   **Outcome:** Provides a semantic "Second Opinion" on whether the log represents a malicious Agentic Breakout or a benign anomaly.
+5.  **Guardrails:** It simultaneously runs regex checks for
