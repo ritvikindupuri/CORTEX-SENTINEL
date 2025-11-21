@@ -14,7 +14,6 @@ As AI agents become more autonomous (utilizing tools via the **Model Context Pro
 
 
 ---
-
 ### 2. High-Level Architecture
 
 The system uses a Bicameral (Two-Brain) Architecture, where the Cloud Brain generates attack telemetry and the Local Brain analyzes it without sending any private data off-device.
@@ -35,10 +34,14 @@ end
 GEMINI -->|JSON Log| THC
 THC --> TFJS
 TFJS -->|Vector Analysis| OPS
+```
 
+1. **The Attacker (Red Team):**
+   Google Gemini 2.5 (or a procedural fallback engine) generates realistic, high-fidelity cyberattack logs. These emulate credential abuse, prompt injection, agentic misuse patterns, and adversarial behaviors.
 
-1.  **The Attacker (Red Team):** Uses **Google Gemini 2.5** (or a local procedural engine) to "hallucinate" sophisticated, realistic cyber-attack logs based on specific vectors.
-2.  **The Defender (Blue Team):** Uses **TensorFlow.js** (WebGL) to convert those logs into 512-dimensional vectors and classify them against known threat concepts.
+2. **The Defender (Blue Team):**
+   A local TensorFlow.js model converts each incoming log into a 512-dimensional embedding and compares it against known threat-anchor vectors. This enables client-side, zero-trust, zero-latency detection with no cloud-bound data.
+
 
 ---
 
